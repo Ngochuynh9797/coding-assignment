@@ -40,7 +40,7 @@ Import rules (enforced by `import/no-restricted-paths`):
 - Conventional Commits; one task = one commit; fixes to AI mistakes go in a separate commit
 - Unit tests: `*.spec.ts` next to the file under test. E2E tests: `test/e2e/`
 - No comments explaining *what* the code does; comment only a non-obvious *why*
-- Every error goes through `AppException` and the shared error format in `docs/API.md`
+- Every error returned to the client goes through `AppException` and the shared error format in `docs/API.md`. Invariant violations (bad registry at startup, unsupported unit reaching the converter) throw a plain `Error`, which the filter maps to `500 INTERNAL_ERROR`
 - Log AI mistakes and rejected suggestions in `notes/ai-log.md`
 
 ## Commands

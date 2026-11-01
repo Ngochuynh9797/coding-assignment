@@ -154,7 +154,7 @@ export function bestsByGroup(sets: readonly PrSetInput[]): DailyBest[];
 - Volume: 102.0583 × 8 = 816.4664.
 - **225 lb (102.0583 kg) so với set nhập 102.0583 kg → hòa → set đến trước thắng**, không phải set kg thắng.
 - Hòa trong cùng ngày: 2 set 100 kg × 5 → set đầu tiên là best của cả 3 metric.
-- Metric khác nhau thắng ở set khác nhau: set A 140×1 (max weight), set B 100×12 (max volume, max e1rm) → setId tương ứng đúng.
+- Metric khác nhau thắng ở set khác nhau: set A 140×1 (max weight, e1rm 144.6667), set B 100×15 (max volume 1500, max e1rm 150) → setId tương ứng đúng. (Không dùng 100×12: e1rm = 140 < 144.6667 nên A thắng cả e1rm.)
 - 1 request log cùng bài 2 lần trong 1 ngày (2 entry) → ra **1** group.
 - Nhiều exercise × nhiều ngày, đầu vào lộn xộn → đầu ra sort đúng.
 - Bodyweight (0 kg) → bests = 0.
@@ -240,13 +240,14 @@ Tiêu chí "timezone handling" và "pagination": validate ngày địa phương,
 
 ### Files
 - Tạo: `src/shared/date/local-date.ts`, `src/shared/date/period.ts`, `src/shared/pagination/cursor.ts`, `src/shared/validation/is-local-date.ts`, `src/shared/validation/is-user-id.ts`, `src/shared/validation/is-time-zone.ts`, kèm `*.spec.ts`
+- Sửa: `src/shared/errors/error-codes.ts` (thêm `INVALID_CURSOR`: mã cross-cutting, dùng chung cho mọi endpoint phân trang)
 - Dependency: `luxon`
 
 ### Thiết kế chi tiết
 ```ts
 // local-date.ts
 export function isValidLocalDate(s: unknown): s is string;     // đúng regex ^\d{4}-\d{2}-\d{2}$ VÀ là ngày có thật (2026-02-30 sai)
-export function isNotTooFarInFuture(date: string, nowUtc: Date): boolean;  // date <= today_utc + 1 ngày
+export function isNotTooFarInFuture(date: string, nowUtc: Date, maxFutureDays = 1): boolean;  // date <= today_utc + maxFutureDays ngày
 
 // period.ts
 export type PeriodKind = 'week' | 'month' | 'year';
@@ -261,7 +262,7 @@ export function encodeCursor(c: HistoryCursor): string;        // base64url(JSON
 export function decodeCursor(s: string): HistoryCursor;        // sai base64/JSON/version/ngày/uuid → AppException INVALID_CURSOR 400
 ```
 - Decorator:
-  - `@IsLocalDate()`: `null`/`undefined`/sai định dạng/ngày không tồn tại → message `must be a valid date in YYYY-MM-DD format`; kèm option `maxFutureDays: 1`.
+  - `@IsLocalDate(options?: { maxFutureDays?: number })`: `null`/`undefined`/sai định dạng/ngày không tồn tại → message `must be a valid date in YYYY-MM-DD format`; có `maxFutureDays` và ngày vượt giới hạn → `must be at most N day(s) after the current UTC date`. Không truyền `maxFutureDays` thì không giới hạn ngày tương lai.
   - `@IsUserId()`: `^[A-Za-z0-9_-]{1,64}$`.
   - `@IsTimeZone()`: Luxon `IANAZone.isValidZone`.
 - Không dùng `new Date('YYYY-MM-DD')` (parse theo UTC, dễ lệch ngày) trong logic ngày.
