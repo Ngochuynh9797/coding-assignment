@@ -110,7 +110,8 @@ Production readiness: configuration management (validate env, fail fast) và str
   | `DATABASE_URL` | URL `postgres://` | bắt buộc |
   | `DB_POOL_MAX` | int | `10` |
   | `LOG_LEVEL` | `fatal..trace` | `info` |
-  | `IDEMPOTENCY_TTL_HOURS` | int | `24` |
+
+  (`IDEMPOTENCY_TTL_HOURS` từng có trong bảng này; đã bỏ ở Phase 4 khi gỡ cron dọn idempotency key.)
 
   Env sai → app không khởi động và in rõ biến nào sai.
 - Truy cập config qua một `AppConfig` typed (inject), không gọi `process.env` rải rác.

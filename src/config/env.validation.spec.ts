@@ -10,7 +10,6 @@ describe('parseEnv', () => {
       DATABASE_URL,
       DB_POOL_MAX: '20',
       LOG_LEVEL: 'warn',
-      IDEMPOTENCY_TTL_HOURS: '48',
     });
 
     expect(config).toEqual({
@@ -19,7 +18,6 @@ describe('parseEnv', () => {
       DATABASE_URL,
       DB_POOL_MAX: 20,
       LOG_LEVEL: 'warn',
-      IDEMPOTENCY_TTL_HOURS: 48,
     });
   });
 
@@ -30,7 +28,6 @@ describe('parseEnv', () => {
       DATABASE_URL,
       DB_POOL_MAX: 10,
       LOG_LEVEL: 'info',
-      IDEMPOTENCY_TTL_HOURS: 24,
     });
   });
 
@@ -63,8 +60,8 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ DATABASE_URL, NODE_ENV: 'staging' })).toThrow(/NODE_ENV/);
   });
 
-  it.each(['DB_POOL_MAX', 'IDEMPOTENCY_TTL_HOURS'])('rejects a non-positive %s', (name) => {
-    expect(() => parseEnv({ DATABASE_URL, [name]: '0' })).toThrow(new RegExp(name));
+  it('rejects a non-positive DB_POOL_MAX', () => {
+    expect(() => parseEnv({ DATABASE_URL, DB_POOL_MAX: '0' })).toThrow(/DB_POOL_MAX/);
   });
 
   it('lists every invalid variable in one error', () => {

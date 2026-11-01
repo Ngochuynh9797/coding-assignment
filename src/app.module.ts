@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
-import { ScheduleModule } from '@nestjs/schedule';
 import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter';
 import { LoggingModule } from '@common/logging/logging.module';
 import { createValidationPipe } from '@common/pipes/validation.pipe';
@@ -15,7 +14,6 @@ import { HealthModule } from './health/health.module';
     ConfigModule,
     LoggingModule,
     DatabaseModule,
-    ScheduleModule.forRoot(),
     HealthModule,
     CatalogModule,
     WorkoutsModule,

@@ -156,7 +156,7 @@ Idempotency-Key: 3c9b1f0a-log-2026-10-31
 - Bodies are compared after validation and normalization, so different key order or `"LBS"` vs `"lb"` count as the same body. The same key with a different body → `422 IDEMPOTENCY_KEY_REUSED`.
 - If two requests with the same key arrive at the same time, the second waits for the first and then receives the replay.
 - If the first request fails (for example `UNKNOWN_EXERCISE`), nothing is stored for the key, so the client can retry with the same key and a corrected body.
-- Keys are kept for 24 hours.
+- Keys are currently kept indefinitely: reusing an old key replays its response (same body) or returns `422` (different body). Use a fresh random key (e.g. a UUID) per logical request.
 
 ### Errors
 

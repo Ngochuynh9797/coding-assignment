@@ -159,7 +159,7 @@ The `*_set_id` columns deliberately have no foreign key: this table is derived d
 | `request_hash` | `TEXT` | NOT NULL | SHA-256 of the **canonicalized** request body (object keys sorted recursively, array order preserved). Detects a reused key with a different body (→ 422) without false positives from key ordering |
 | `response_status` | `SMALLINT` | | HTTP status of the original response, replayed together with the body |
 | `response` | `JSONB` | | Stored response body replayed on retry |
-| `created_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | Keys older than 24h are purged by a cleanup job |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL, default `now()` | When the key was first claimed. Keys are not purged yet (see What would change at scale) |
 
 ---
 
@@ -176,7 +176,7 @@ Extension: `pg_trgm`.
 | `entries_user_exercise_date` | `(user_id, exercise_id, performed_on DESC, id DESC)` | History filtered by exercise (exact or partial) or muscle group |
 | `sets_entry` | `UNIQUE (entry_id, set_index)` | Loading sets of a page of entries |
 | `daily_bests_pk` | `PRIMARY KEY (user_id, exercise_id, performed_on)` | PR and PR comparison over any date range |
-| `idempotency_created_at` | `(created_at)` | Cleanup job |
+| `idempotency_created_at` | `(created_at)` | Future cleanup of old keys (no cleanup runs yet) |
 
 `daily_bests_pk` has no `INCLUDE` columns: the `best_*` columns are updated by every upsert, and keeping them out of the index lets those updates be HOT (no index write), and the table's `fillfactor = 90` leaves room in each page for the new row version. Rows per `(user, exercise)` are bounded by the number of training days, so reading the heap is cheap.
 
@@ -268,3 +268,4 @@ The winning `*_set_id` gives the exact reps × weight without recomputation. PR 
 - Hash-partition `workout_entries` and `daily_exercise_bests` by `user_id` (every query filters by user, so partition pruning applies). Partitioning `workout_sets` the same way first requires denormalizing `user_id` onto it (and making the entries key `(user_id, id)`); this is deliberately deferred. Citus if a single node is not enough.
 - Add an all-time `personal_records` cache table if PR dashboards dominate traffic, updated in the same transaction and rebuildable from `daily_exercise_bests`.
 - Cache the exercise catalog and muscle-group mapping in memory or Redis with invalidation on change.
+- Expire idempotency keys: today they are kept indefinitely, so `idempotency_keys` grows with every keyed request (each row stores the full response). Delete keys older than a TTL in small batches through `idempotency_created_at`, scheduled outside the API process (`pg_cron` or a scheduled job), or range-partition the table by `created_at` and drop old partitions.

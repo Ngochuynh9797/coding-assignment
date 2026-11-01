@@ -9,7 +9,7 @@ Core feature 1: bulk logging nguyên tử, idempotency, cập nhật read model 
 | Task | Tên | Ước lượng | Phụ thuộc | Commit |
 |---|---|---|---|---|
 | [T4.1](#T41) | DTOs + validation cho POST workouts | 30m | T2.1, T2.4 | `feat(workouts): add validated DTOs for bulk workout logging` |
-| [T4.2](#T42) | IdempotencyService + cleanup cron | 30m | T3.1, T2.3 | `feat(idempotency): add transactional idempotency keys with replay and cleanup` |
+| [T4.2](#T42) | IdempotencyService | 30m | T3.1, T2.3 | `feat(idempotency): add transactional idempotency keys with replay` |
 | [T4.3](#T43) | Write flow: log bulk + DailyBestsWriter | 45m | T4.1, T4.2, T3.3, T2.2 | `feat(workouts): implement transactional bulk logging with daily bests upsert` |
 | [T4.4](#T44) | Script rebuild-daily-bests | 15m | T4.3 | `feat(personal-records): add rebuild script for daily exercise bests` |
 
@@ -86,7 +86,7 @@ feat(workouts): add validated DTOs for bulk workout logging
 ---
 
 <a id="T42"></a>
-## T4.2 — IdempotencyService + cleanup cron
+## T4.2 — IdempotencyService
 
 **Phase:** 4 · **Ước lượng:** 30m · **Phụ thuộc:** T3.1, T2.3
 
@@ -96,15 +96,14 @@ Edge case "concurrent writes: same user logging same exercise at same time" tron
 ### Phạm vi
 **Làm**
 - `IdempotencyService.claim` / `complete` chạy **trong transaction của caller**
-- Cron dọn key quá hạn
 
 **Không làm**
 - Không làm interceptor tổng quát: claim phải nằm trong cùng transaction với việc ghi workout
+- Không dọn key quá hạn: key được giữ vô thời hạn. Bản đầu có cron dọn key mỗi giờ (`@nestjs/schedule`) nhưng đã bị gỡ khi review vì over-engineering ở quy mô này; hướng làm khi cần nằm trong mục "What would change at scale" của `docs/SCHEMA.md`. Index `idempotency_created_at` được giữ lại cho việc đó
 
 ### Files
-- Tạo: `src/infrastructure/idempotency/idempotency.service.ts`, `idempotency.module.ts`, `idempotency-cleanup.job.ts`, `idempotency.errors.ts`
-- Sửa: `src/app.module.ts` (`ScheduleModule.forRoot()`)
-- Dependency: `@nestjs/schedule@6.1.3` (bản 12.x là ESM-only, Jest không load được)
+- Tạo: `src/infrastructure/idempotency/idempotency.service.ts`, `idempotency.module.ts`, `idempotency.errors.ts`
+- Sửa: `src/config/env.validation.ts`, `.env.example`, `docker-compose.yml` (bỏ `IDEMPOTENCY_TTL_HOURS`, không còn dùng)
 
 ### Thiết kế chi tiết
 ```ts
@@ -125,8 +124,7 @@ complete(tx, userId: string, key: string, status: number, body: unknown): Promis
 - `complete`: `tx.update(IdempotencyKey, { userId, key }, { responseStatus, response })`.
 - Caller (T4.3) dùng `hashRequestBody(dto)` trên body đã validate.
 - Replay trả đúng status gốc (controller set status động qua `@Res({ passthrough: true })`) và thêm header `Idempotent-Replayed: true`.
-- Cron `@Cron(CronExpression.EVERY_HOUR)`: mốc `idempotencyCutoff(now, IDEMPOTENCY_TTL_HOURS)` tính trong ứng dụng rồi bind làm tham số; xóa theo lô bằng QueryBuilder `DELETE ... WHERE ctid IN (SELECT k.ctid ... WHERE created_at < :cutoff LIMIT 5000)` lặp đến khi hết; chạy trên nhiều replica cùng lúc cũng vô hại.
-- Key đã quá TTL nhưng chưa bị dọn vẫn được replay (đơn giản, không gây sai).
+- Key không hết hạn: dùng lại một key cũ với cùng body → replay, body khác → 422. Client dùng key ngẫu nhiên (UUID) nên thực tế không trùng.
 
 ### Tiêu chí hoàn thành
 - [ ] Không có đường nào ghi workout mà không đi qua claim khi có header
@@ -134,11 +132,10 @@ complete(tx, userId: string, key: string, status: number, body: unknown): Promis
 
 ### Tests
 - e2e ở T7.2: replay đúng status + body; khác thứ tự key JSON → replay; khác body → 422; 2 request đồng thời cùng key → 1 lần ghi, request còn lại nhận replay; request đầu lỗi validation exercise → retry cùng key với body đã sửa vẫn thành công.
-- Unit job: tính đúng mốc thời gian theo `IDEMPOTENCY_TTL_HOURS`.
 
 ### Commit dự kiến
 ```
-feat(idempotency): add transactional idempotency keys with replay and cleanup
+feat(idempotency): add transactional idempotency keys with replay
 ```
 
 ### Rủi ro / điểm cần soi khi review code AI

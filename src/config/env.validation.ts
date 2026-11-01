@@ -17,7 +17,6 @@ export const envSchema = z.object({
   }),
   DB_POOL_MAX: integer(1, 1000).default(10),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
-  IDEMPOTENCY_TTL_HOURS: integer(1, 8760).default(24),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
