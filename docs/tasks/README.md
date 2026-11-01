@@ -13,7 +13,7 @@ Nguồn chuẩn cho schema: [`docs/SCHEMA.md`](../SCHEMA.md). Spec nào lệch v
 | Phase | Spec | Task con | Phụ thuộc | Ước lượng | Trạng thái |
 |---|---|---|---|---|---|
 | 0 | [Design & setup](phase-0-design-setup.md) | T0.1–T0.3 | — | ~1h | Chờ review |
-| 1 | [Scaffold & production basics](phase-1-scaffold.md) | T1.1–T1.4 | Phase 0 | ~2h | Chờ review |
+| 1 | [Scaffold & production basics](phase-1-scaffold.md) | T1.1–T1.4 | Phase 0 | ~2h | Xong |
 | 2 | [Domain thuần + unit test](phase-2-domain.md) | T2.1–T2.4 | Phase 1 | ~1.5h | Chờ review |
 | 3 | [Database & catalog](phase-3-database-catalog.md) | T3.1–T3.3 | Phase 1, 2 | ~1.5h | Chờ review |
 | 4 | [Log workout](phase-4-log-workout.md) | T4.1–T4.4 | Phase 2, 3 | ~2h | Chờ review |

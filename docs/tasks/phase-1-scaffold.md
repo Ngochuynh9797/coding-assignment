@@ -1,6 +1,6 @@
 # Phase 1 — Scaffold & production basics
 
-**Ước lượng:** ~2h · **Phụ thuộc:** Phase 0 · **Trạng thái:** Chờ review
+**Ước lượng:** ~2h · **Phụ thuộc:** Phase 0 · **Trạng thái:** Xong
 
 Dựng khung NestJS 3 tầng, config, logging, error format và Docker để mọi phase sau có nền production-ready.
 
@@ -33,7 +33,7 @@ Dựng khung project với cấu trúc 3 tầng (`infrastructure/`, `shared/`, `
 
 **Không làm**
 - Chưa có config, logging, DB (T1.2, T3.1)
-- Xóa `AppController`/`AppService` mẫu của Nest CLI
+- Không giữ `AppController`/`AppService` mẫu của Nest CLI (viết file tay, không chạy `nest new`)
 
 ### Files
 - Tạo: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `nest-cli.json`, `eslint.config.mjs`, `.prettierrc`, `jest.config.ts`, `src/main.ts`, `src/app.module.ts`
@@ -213,29 +213,29 @@ Deliverable "setup must work with `docker compose up`" và tiêu chí "Docker se
 - Dockerfile multi-stage
 - `docker-compose.yml` (postgres:18 + app)
 - Entrypoint chạy migrate + seed rồi start (các bước migrate/seed được nối vào ở T3.1/T3.2, ở task này để sẵn chỗ)
-- `GET /health`
+- `GET /health` (liveness)
 
 **Không làm**
 - Không làm compose riêng cho test (e2e dùng Testcontainers, T7.1)
+- Không kiểm tra DB trong `/health`: chưa có kết nối DB (T3.1), DB check được nối vào ở T3.1
 
 ### Files
-- Tạo: `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `docker/entrypoint.sh`, `src/infrastructure/health/health.controller.ts`, `src/infrastructure/health/health.module.ts`
+- Tạo: `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `docker/entrypoint.sh`, `src/infrastructure/health/health.controller.ts`, `src/infrastructure/health/health.module.ts`, `config/.gitkeep` (để `COPY config/` không lỗi trước T3.2)
 
 ### Thiết kế chi tiết
-- **Dockerfile**: stage `deps` (`npm ci`), stage `build` (`npm run build`, `npm prune --omit=dev`), stage `runtime` (`node:22-alpine`, user `node` không phải root, chỉ copy `dist/`, `node_modules/`, `config/`, `package.json`). `HEALTHCHECK` gọi `/api/v1/health`.
+- **Dockerfile**: stage `deps` (`npm ci`), stage `build` (`npm run build`, `npm prune --omit=dev --omit=optional`: `ts-node`/`typescript` là optional peer của `typeorm`, bị npm đánh dấu `devOptional` nên `--omit=dev` không loại), stage `runtime` (`node:22-alpine`, user `node` không phải root, chỉ copy `dist/`, `node_modules/`, `config/`, `package.json`). `HEALTHCHECK` gọi `/api/v1/health`.
 - **docker-compose.yml**:
-  - `db`: `postgres:18`, env user/password/db, healthcheck `pg_isready`, volume mount tại **`/var/lib/postgresql`** (image Postgres 18 đổi vị trí PGDATA so với các bản trước), port 5432 publish ra host để debug.
+  - `db`: `postgres:18`, env user/password/db, healthcheck `pg_isready`, volume mount tại **`/var/lib/postgresql`** (image Postgres 18 đổi vị trí PGDATA so với các bản trước; đã kiểm tra image: `PGDATA=/var/lib/postgresql/18/docker`, `VOLUME /var/lib/postgresql`), port 5432 publish ra host để debug (đổi được bằng `DB_HOST_PORT` nếu máy đã dùng 5432).
   - `app`: build từ Dockerfile, `depends_on: db: condition: service_healthy`, `DATABASE_URL` trỏ tới `db`, port 3000.
 - **entrypoint.sh**: `set -e` → `node dist/.../migrate` → `node dist/.../seed-catalog` → `exec node dist/main.js` (`exec` để nhận SIGTERM, phối hợp với `enableShutdownHooks`).
-- **/health**: `SELECT 1` với timeout ngắn; OK → `200 { status: "ok", db: "up" }`; lỗi → `503 SERVICE_UNAVAILABLE`. Không phụ thuộc `@nestjs/terminus` (một query là đủ).
+- **/health**: ở task này chỉ là liveness, `200 { status: "ok" }`. DB check (`SELECT 1`, `db: "up"`, `503 SERVICE_UNAVAILABLE`) được nối vào ở T3.1 khi có `DatabaseModule`. Không phụ thuộc `@nestjs/terminus` (một query là đủ).
 
 ### Tiêu chí hoàn thành
 - [ ] `docker compose up --build` từ máy sạch → `curl localhost:3000/api/v1/health` trả 200
-- [ ] Dừng container `db` → `/health` trả 503
 - [ ] `docker compose down` → app tắt êm (không bị kill sau timeout)
 
 ### Tests
-- Kiểm tra thủ công theo tiêu chí trên (e2e cho /health ở T7.1).
+- Kiểm tra thủ công theo tiêu chí trên (e2e cho /health ở T7.1). Tiêu chí "dừng `db` → 503" chuyển sang T3.1.
 
 ### Commit dự kiến
 ```

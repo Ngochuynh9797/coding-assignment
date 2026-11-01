@@ -28,13 +28,14 @@ Hiện thực đúng `docs/SCHEMA.md` (tiêu chí "schema design, indexing strat
 - `DatabaseModule` + helper transaction
 - Migration `0001-init`
 - Script `migrate` (chạy trong entrypoint Docker)
+- Nối DB check vào `GET /health` (dời từ T1.4): `SELECT 1` với timeout ngắn; OK → `200 { status: "ok", db: "up" }`; lỗi → `503 SERVICE_UNAVAILABLE` theo error format chung
 
 **Không làm**
 - Không dùng `synchronize`, không định nghĩa entity để sinh schema; repository dùng raw SQL / QueryBuilder
 
 ### Files
 - Tạo: `src/infrastructure/database/data-source.ts`, `src/infrastructure/database/database.module.ts`, `src/infrastructure/database/transaction.ts`, `src/infrastructure/database/migrations/0001-init.ts`, `src/infrastructure/database/migrate.ts`
-- Sửa: `docker/entrypoint.sh`, `package.json` (`migration:run`, `migration:revert`)
+- Sửa: `docker/entrypoint.sh`, `package.json` (`migration:run`, `migration:revert`), `src/infrastructure/health/health.controller.ts`, `src/infrastructure/health/health.module.ts`
 
 ### Thiết kế chi tiết
 ```sql
@@ -117,6 +118,7 @@ CREATE INDEX idempotency_created_at ON idempotency_keys (created_at);
 - [ ] `npm run migration:run` trên DB rỗng tạo đủ 7 bảng, 8 index như SCHEMA.md (`\di` khớp tên)
 - [ ] `migration:revert` rồi `run` lại không lỗi
 - [ ] `docker compose up` tự chạy migration
+- [ ] `/health` trả `200 { status: "ok", db: "up" }`; dừng container `db` → `/health` trả 503 `SERVICE_UNAVAILABLE`
 
 ### Tests
 - Kiểm tra thủ công bằng `psql` (`\d+` từng bảng). e2e ở Phase 7 chạy trên migration thật.

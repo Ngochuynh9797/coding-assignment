@@ -63,6 +63,7 @@ Every error uses the same shape:
 | `INVALID_CURSOR` | 400 | The pagination cursor is malformed or has been tampered with |
 | `EXERCISE_NOT_FOUND` | 404 | PR or PR comparison requested for an exercise that is not in the catalog |
 | `NOT_FOUND` | 404 | The route does not exist |
+| `CONFLICT` | 409 | A database constraint (unique or foreign key) was violated and the endpoint has no more specific error for it |
 | `IDEMPOTENCY_KEY_REUSED` | 422 | The same `Idempotency-Key` was sent with a different body |
 | `INTERNAL_ERROR` | 500 | Unexpected error |
 | `SERVICE_UNAVAILABLE` | 503 | `GET /health` when the database is not reachable |
