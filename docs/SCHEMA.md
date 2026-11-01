@@ -146,6 +146,8 @@ Best performance per user, exercise and day. Every PR query reads from this tabl
 | `best_e1rm_kg` | `NUMERIC(10,4)` | NOT NULL | Highest Epley estimate `weight_kg × (1 + reps / 30)` of the day |
 | `best_e1rm_set_id` | `UUID` | NOT NULL | Logical reference, no FK |
 
+The table is created `WITH (fillfactor = 90)`: every log request upserts into it, and the free space left in each page lets those updates stay on the same page as HOT updates (see `daily_bests_pk` below).
+
 The `*_set_id` columns deliberately have no foreign key: this table is derived data and is kept consistent by the write flow and the rebuild job, not by constraints. Without FKs, deleting entries (if added later) is not blocked by this table; the affected day is recomputed instead.
 
 ### `idempotency_keys`
@@ -176,7 +178,7 @@ Extension: `pg_trgm`.
 | `daily_bests_pk` | `PRIMARY KEY (user_id, exercise_id, performed_on)` | PR and PR comparison over any date range |
 | `idempotency_created_at` | `(created_at)` | Cleanup job |
 
-`daily_bests_pk` has no `INCLUDE` columns: the `best_*` columns are updated by every upsert, and keeping them out of the index lets those updates be HOT (no index write). Rows per `(user, exercise)` are bounded by the number of training days, so reading the heap is cheap.
+`daily_bests_pk` has no `INCLUDE` columns: the `best_*` columns are updated by every upsert, and keeping them out of the index lets those updates be HOT (no index write), and the table's `fillfactor = 90` leaves room in each page for the new row version. Rows per `(user, exercise)` are bounded by the number of training days, so reading the heap is cheap.
 
 Name and muscle-group filters are both resolved against the small catalog first, producing a short list of `exercise_id`s; the large `workout_entries` table is then read only through `(user_id, exercise_id, ...)`. `(performed_on, id)` is the pagination key because many entries can share the same date; `id` makes the order total and stable. Because ids are UUIDv7 (time-ordered), entries on the same date come out newest-logged first, the same order a sequence would give. A random UUIDv4 would also paginate correctly but would order same-day entries randomly.
 

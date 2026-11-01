@@ -427,8 +427,8 @@ The exercise catalog. Logging only accepts names from this list.
 
 | Param | Required | Rules |
 |---|---|---|
-| `search` | No | Partial, case- and whitespace-insensitive match on the name; `%` and `_` match literally |
-| `muscleGroup` | No | Muscle group code (e.g. `chest`) |
+| `search` | No | 1–100 characters, not blank. Partial, case- and whitespace-insensitive match on the name; `%` and `_` match literally |
+| `muscleGroup` | No | Muscle group code, `^[a-z_]{1,50}$` (e.g. `chest`) |
 
 ### Example
 

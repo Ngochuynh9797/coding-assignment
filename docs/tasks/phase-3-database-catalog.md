@@ -96,7 +96,7 @@ CREATE TABLE daily_exercise_bests (
   best_e1rm_kg       NUMERIC(10,4) NOT NULL,
   best_e1rm_set_id   UUID NOT NULL,
   CONSTRAINT daily_bests_pk PRIMARY KEY (user_id, exercise_id, performed_on)
-);
+) WITH (fillfactor = 90);
 
 CREATE TABLE idempotency_keys (
   user_id         TEXT NOT NULL,
@@ -131,7 +131,7 @@ feat(db): add initial migration for catalog, workout log, daily bests and idempo
 ### Rủi ro / điểm cần soi khi review code AI
 - AI hay sinh entity + `synchronize: true` hoặc migration tự sinh → sai kiểu (`float`), thiếu index DESC, thiếu tên constraint.
 - `uuidv7()` chỉ có từ Postgres 18 → chạy nhầm image cũ sẽ lỗi ngay ở migration (đây là dấu hiệu tốt, không cần fallback).
-- Cân nhắc khi review: thêm `WITH (fillfactor = 90)` cho `daily_exercise_bests` để upsert dễ là HOT update hơn. Nếu đồng ý thì cập nhật SCHEMA.md trước.
+- Đã chốt: `daily_exercise_bests` tạo `WITH (fillfactor = 90)` để upsert dễ là HOT update hơn (SCHEMA.md đã cập nhật).
 
 ---
 
