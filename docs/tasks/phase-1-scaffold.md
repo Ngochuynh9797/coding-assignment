@@ -230,7 +230,7 @@ Deliverable "setup must work with `docker compose up`" và tiêu chí "Docker se
 - **docker-compose.yml**:
   - `db`: `postgres:18`, env user/password/db, healthcheck `pg_isready`, volume mount tại **`/var/lib/postgresql`** (image Postgres 18 đổi vị trí PGDATA so với các bản trước; đã kiểm tra image: `PGDATA=/var/lib/postgresql/18/docker`, `VOLUME /var/lib/postgresql`), port 5432 publish ra host để debug (đổi được bằng `DB_HOST_PORT` nếu máy đã dùng 5432).
   - `app`: build từ Dockerfile, `depends_on: db: condition: service_healthy`, `DATABASE_URL` trỏ tới `db`, port 3000.
-- **entrypoint.sh**: `set -e` → `node dist/.../migrate` → `node dist/.../seed-catalog` → `exec node dist/main.js` (`exec` để nhận SIGTERM, phối hợp với `enableShutdownHooks`).
+- **entrypoint.sh**: `set -e` → `node dist/.../migrate` → `node dist/.../seed-catalog` (chỉ khi `SEED_CATALOG=true`, xem T3.2) → `exec node dist/main.js` (`exec` để nhận SIGTERM, phối hợp với `enableShutdownHooks`).
 - **/health**: ở task này chỉ là liveness, `200 { status: "ok" }`. DB check (`SELECT 1`, `db: "up"`, `503 SERVICE_UNAVAILABLE`) được nối vào ở T3.1 khi có `DatabaseModule`. Không phụ thuộc `@nestjs/terminus` (một query là đủ).
 
 ### Tiêu chí hoàn thành

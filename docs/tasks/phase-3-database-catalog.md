@@ -31,10 +31,10 @@ Hiện thực đúng `docs/SCHEMA.md` (tiêu chí "schema design, indexing strat
 - Nối DB check vào `GET /health` (dời từ T1.4): `SELECT 1` với timeout ngắn; OK → `200 { status: "ok", db: "up" }`; lỗi → `503 SERVICE_UNAVAILABLE` theo error format chung
 
 **Không làm**
-- Không dùng `synchronize`, không định nghĩa entity để sinh schema; repository dùng raw SQL / QueryBuilder
+- Không dùng `synchronize`, không sinh migration từ entity: schema chỉ do migration SQL viết tay quản lý. Entity (cả 7 bảng) chỉ map cột vào bảng có sẵn; truy cập dữ liệu qua Repository/EntityManager, QueryBuilder khi Repository API không diễn đạt được; không dùng `query()` với SQL thuần ngoài migration và `/health`
 
 ### Files
-- Tạo: `src/infrastructure/database/data-source.ts`, `src/infrastructure/database/database.module.ts`, `src/infrastructure/database/transaction.ts`, `src/infrastructure/database/migrations/0001-init.ts`, `src/infrastructure/database/migrate.ts`
+- Tạo: `src/infrastructure/database/data-source.ts`, `src/infrastructure/database/database.module.ts`, `src/infrastructure/database/transaction.ts`, `src/infrastructure/database/migrations/0001-init.ts`, `src/infrastructure/database/migrate.ts`, `src/infrastructure/database/decimal.transformer.ts` (NUMERIC ↔ `Decimal`), entity: `src/modules/catalog/entities/*`, `src/modules/workouts/entities/*`, `src/modules/personal-records/entities/daily-exercise-best.entity.ts`, `src/infrastructure/idempotency/idempotency-key.entity.ts` (DataSource nạp entity bằng glob `*.entity` vì `infrastructure/` không được import `modules/`)
 - Sửa: `docker/entrypoint.sh`, `package.json` (`migration:run`, `migration:revert`), `src/health/health.controller.ts`, `src/health/health.module.ts`
 
 ### Thiết kế chi tiết
@@ -129,7 +129,7 @@ feat(db): add initial migration for catalog, workout log, daily bests and idempo
 ```
 
 ### Rủi ro / điểm cần soi khi review code AI
-- AI hay sinh entity + `synchronize: true` hoặc migration tự sinh → sai kiểu (`float`), thiếu index DESC, thiếu tên constraint.
+- AI hay bật `synchronize: true` hoặc dùng migration sinh từ entity → sai kiểu (`float`), thiếu index DESC, thiếu tên constraint. Entity có thể khác migration mà không ai báo: tên cột phải khai báo `name` tường minh, cột NUMERIC phải qua `decimalTransformer`.
 - `uuidv7()` chỉ có từ Postgres 18 → chạy nhầm image cũ sẽ lỗi ngay ở migration (đây là dấu hiệu tốt, không cần fallback).
 - Đã chốt: `daily_exercise_bests` tạo `WITH (fillfactor = 90)` để upsert dễ là HOT update hơn (SCHEMA.md đã cập nhật).
 
@@ -152,8 +152,8 @@ Yêu cầu "exercise → muscle group mapping should be configurable (not hardco
 - Admin API (ngoài phạm vi)
 
 ### Files
-- Tạo: `config/exercise-metadata.json`, `src/modules/catalog/catalog.seeder.ts`, `src/modules/catalog/catalog-metadata.schema.ts`, `src/modules/catalog/seed-catalog.ts` (entry chạy độc lập)
-- Sửa: `docker/entrypoint.sh`, `package.json` (`seed:catalog`)
+- Tạo: `config/exercise-metadata.json`, `src/seeds/catalog/catalog.seeder.ts`, `src/seeds/catalog/catalog-metadata.schema.ts`, `src/seeds/catalog/seed-catalog.ts` (entry chạy độc lập). Seed là dữ liệu cho local/test nên nằm ở layer `seeds/`, tách khỏi logic nghiệp vụ của `modules/catalog` (không layer nào được import `seeds/`)
+- Sửa: `docker/entrypoint.sh` (chỉ seed khi `SEED_CATALOG=true`), `docker-compose.yml` (bật `SEED_CATALOG`), `package.json` (`seed:catalog`), `eslint.config.mjs` (cấm import `seeds/`)
 
 ### Thiết kế chi tiết
 - Định dạng file:
@@ -169,9 +169,9 @@ Yêu cầu "exercise → muscle group mapping should be configurable (not hardco
 - Khoảng 12 muscle group (chest, back, shoulders, biceps, triceps, forearms, quads, hamstrings, glutes, calves, core, full_body) và ~60 exercise, gồm vài bài không có muscle group và vài bài trùng từ khóa (`Bench Press`, `Incline Bench Press`, `Close-Grip Bench Press`) để thử partial match.
 - Validate file bằng zod trước khi ghi: code muscle group hợp lệ (`^[a-z_]+$`), exercise tham chiếu code không tồn tại → lỗi, 2 exercise có cùng `normalizeExerciseName` → lỗi.
 - Ghi trong **1 transaction**:
-  1. Upsert `muscle_groups` theo `code` (cập nhật `name`).
-  2. Upsert `exercises` theo `name_key` (cập nhật `display_name`, `updated_at = now()`).
-  3. Với mỗi exercise có trong file: xóa mapping cũ rồi insert mapping mới (đồng bộ đúng theo file).
+  1. `manager.upsert(MuscleGroup, …, { conflictPaths: ['code'], skipUpdateIfNoValuesChanged: true })` (cập nhật `name`).
+  2. `manager.upsert(Exercise, …, { conflictPaths: ['nameKey'], skipUpdateIfNoValuesChanged: true })` (cập nhật `display_name`; `updated_at = DEFAULT` chỉ khi giá trị thật sự đổi, nên chạy lại cho kết quả giống hệt).
+  3. Với mỗi exercise có trong file: `delete(ExerciseMuscleGroup, { exerciseId: In(ids) })` rồi `insert` mapping mới (đồng bộ đúng theo file).
 - Không xóa exercise không còn trong file (có thể đã có history, FK `RESTRICT`).
 - Log số lượng muscle group / exercise / mapping đã ghi.
 
@@ -220,9 +220,9 @@ Cung cấp cho các module khác cách resolve tên exercise và filter theo tê
 interface ExerciseRef { id: number; displayName: string }
 
 class CatalogRepository {
-  findByNameKeys(keys: string[]): Promise<Map<string, ExerciseRef>>;   // WHERE name_key = ANY($1)
-  findIdsByNameLike(term: string): Promise<number[]>;                   // term đã normalize + escape; LIKE '%'||$1||'%' ESCAPE '\'
-  findIdsByMuscleGroup(code: string): Promise<number[]>;                // join muscle_groups theo code
+  findByNameKeys(keys: string[]): Promise<Map<string, ExerciseRef>>;   // find({ where: { nameKey: In(keys) } })
+  findIdsByNameLike(term: string): Promise<number[]>;                   // term đã normalize + escape; QueryBuilder: nameKey LIKE :pattern ESCAPE '\'
+  findIdsByMuscleGroup(code: string): Promise<number[]>;                // find({ where: { muscleGroup: { code } } }) trên ExerciseMuscleGroup
   list(filter: { search?: string; muscleGroup?: string }): Promise<ExerciseWithGroups[]>;
 }
 
@@ -236,7 +236,7 @@ class CatalogService {
 ```
 - `UNKNOWN_EXERCISE` details: `[{ field: "entries[2].exerciseName", issue: "Unknown exercise 'Bech Press'" }]`, message gợi ý dùng `GET /api/v1/exercises`.
 - `GET /api/v1/exercises?search=press&muscleGroup=chest` → `{ data: [{ id, name, muscleGroups: ["chest", "triceps"] }] }`, sort theo `name`, không phân trang (catalog nhỏ, ghi chú trong API.md). `muscleGroup` không tồn tại → `data: []`.
-- `muscleGroups` lấy bằng `array_agg` trong 1 query, không N+1.
+- `muscleGroups` lấy trong 1 query bằng `leftJoinAndSelect` (Exercise → ExerciseMuscleGroup → MuscleGroup, sort theo `mg.code`), không N+1; filter muscle group dùng subquery `EXISTS` để vẫn trả đủ mọi nhóm của bài khớp.
 
 ### Tiêu chí hoàn thành
 - [ ] Resolve N tên chỉ tốn 1 query

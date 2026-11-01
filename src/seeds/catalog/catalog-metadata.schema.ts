@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { normalizeExerciseName } from './domain/normalize-exercise-name';
+import { normalizeExerciseName } from '@modules/catalog/domain/normalize-exercise-name';
 
 const muscleGroupCode = z.string().regex(/^[a-z_]+$/, 'must match ^[a-z_]+$');
 

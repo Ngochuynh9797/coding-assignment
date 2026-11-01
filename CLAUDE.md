@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## Project
-Workout Logging API: NestJS + TypeScript, PostgreSQL 18, TypeORM with hand-written SQL migrations (no entities, no `synchronize`).
+Workout Logging API: NestJS + TypeScript, PostgreSQL 18, TypeORM. The schema is owned by hand-written SQL migrations (no `synchronize`, no generated migrations); entities only map columns onto those tables, and data access goes through repositories / `EntityManager`, with QueryBuilder when the Repository API cannot express a query.
 
 ## Sources of truth
 - `docs/SCHEMA.md`: tables, indexes, write flow, read flows
@@ -19,12 +19,14 @@ src/
   infrastructure/   external systems: database, idempotency
   health/           GET /health
   modules/          catalog, workouts, personal-records
+  seeds/            local/test data loaders run as standalone scripts (catalog seed)
 ```
 Global filter and pipe are registered in `app.module.ts` (`APP_FILTER`, `APP_PIPE`).
 
 Import rules (enforced by `import/no-restricted-paths`):
 - `config/`, `common/`, `shared/`, `infrastructure/`, `health/` never import from `modules/`
 - `shared/` never imports from `infrastructure/database` (no DB access in `shared/`)
+- Nothing imports from `seeds/`; `seeds/` may import `modules/` and `infrastructure/`
 - Modules depend one way only: `workouts → catalog`, `workouts → personal-records`, `personal-records → catalog`
 
 ## Forbidden
@@ -34,6 +36,8 @@ Import rules (enforced by `import/no-restricted-paths`):
 - Hardcoded units (`'kg'`, `'lb'`, `@IsEnum([...])`, `if (unit === ...)`) outside the unit registry (tests excepted)
 - Server timezone in date logic (`new Date('YYYY-MM-DD')`, `getMonth()`, ...): dates are `YYYY-MM-DD` strings; periods use the user's `tz`
 - `useContainer` from class-validator
+- Raw SQL via `query(...)` outside migrations and the `/health` ping: use entity repositories, or QueryBuilder (always with bound parameters)
+- `synchronize: true` or `migration:generate`; entity columns without an explicit `name`; `NUMERIC` columns without `decimalTransformer`
 - Writes to `daily_exercise_bests` outside `DailyBestsWriter` and the rebuild job (T4.4)
 
 ## Conventions

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository, type SelectQueryBuilder } from 'typeorm';
+import { Exercise } from './entities/exercise.entity';
+import { ExerciseMuscleGroup } from './entities/exercise-muscle-group.entity';
 
 export interface ExerciseRef {
   id: number;
@@ -18,62 +21,72 @@ export interface CatalogListFilter {
   muscleGroup?: string;
 }
 
+function whereNameKeyContains(qb: SelectQueryBuilder<Exercise>, term: string): void {
+  qb.andWhere(`e.nameKey LIKE :pattern ESCAPE '\\'`, { pattern: `%${term}%` });
+}
+
 @Injectable()
 export class CatalogRepository {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectRepository(Exercise) private readonly exercises: Repository<Exercise>,
+    @InjectRepository(ExerciseMuscleGroup)
+    private readonly muscleGroupLinks: Repository<ExerciseMuscleGroup>,
+  ) {}
 
   async findByNameKeys(keys: string[]): Promise<Map<string, ExerciseRef>> {
-    const rows: { id: number; display_name: string; name_key: string }[] =
-      await this.dataSource.query(
-        `SELECT id, display_name, name_key FROM exercises WHERE name_key = ANY($1::text[])`,
-        [keys],
-      );
-    return new Map(
-      rows.map((row) => [row.name_key, { id: row.id, displayName: row.display_name }]),
-    );
+    const rows = await this.exercises.find({
+      select: { id: true, displayName: true, nameKey: true },
+      where: { nameKey: In(keys) },
+    });
+    return new Map(rows.map((row) => [row.nameKey, { id: row.id, displayName: row.displayName }]));
   }
 
   async findIdsByNameLike(term: string): Promise<number[]> {
-    const rows: { id: number }[] = await this.dataSource.query(
-      `SELECT id FROM exercises WHERE name_key LIKE '%' || $1 || '%' ESCAPE '\\'`,
-      [term],
-    );
+    const qb = this.exercises.createQueryBuilder('e').select('e.id');
+    whereNameKeyContains(qb, term);
+    const rows = await qb.getMany();
     return rows.map((row) => row.id);
   }
 
   async findIdsByMuscleGroup(code: string): Promise<number[]> {
-    const rows: { id: number }[] = await this.dataSource.query(
-      `SELECT emg.exercise_id AS id
-       FROM exercise_muscle_groups emg
-       JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
-       WHERE mg.code = $1`,
-      [code],
-    );
-    return rows.map((row) => row.id);
+    const rows = await this.muscleGroupLinks.find({
+      select: { exerciseId: true },
+      where: { muscleGroup: { code } },
+    });
+    return rows.map((row) => row.exerciseId);
   }
 
-  // The muscle-group filter is an EXISTS so that muscleGroups still lists every group of a match.
-  list(filter: CatalogListFilter): Promise<ExerciseWithGroups[]> {
-    return this.dataSource.query(
-      `SELECT e.id,
-              e.display_name AS name,
-              COALESCE(
-                array_agg(mg.code ORDER BY mg.code) FILTER (WHERE mg.code IS NOT NULL),
-                '{}'
-              ) AS "muscleGroups"
-       FROM exercises e
-       LEFT JOIN exercise_muscle_groups emg ON emg.exercise_id = e.id
-       LEFT JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
-       WHERE ($1::text IS NULL OR e.name_key LIKE '%' || $1 || '%' ESCAPE '\\')
-         AND ($2::text IS NULL OR EXISTS (
-               SELECT 1
-               FROM exercise_muscle_groups f
-               JOIN muscle_groups fmg ON fmg.id = f.muscle_group_id
-               WHERE f.exercise_id = e.id AND fmg.code = $2
-             ))
-       GROUP BY e.id
-       ORDER BY e.name_key, e.id`,
-      [filter.search ?? null, filter.muscleGroup ?? null],
-    );
+  async list(filter: CatalogListFilter): Promise<ExerciseWithGroups[]> {
+    const qb = this.exercises
+      .createQueryBuilder('e')
+      .leftJoinAndSelect('e.muscleGroupLinks', 'link')
+      .leftJoinAndSelect('link.muscleGroup', 'mg')
+      .orderBy('e.nameKey')
+      .addOrderBy('e.id')
+      .addOrderBy('mg.code');
+    if (filter.search !== undefined) {
+      whereNameKeyContains(qb, filter.search);
+    }
+    if (filter.muscleGroup !== undefined) {
+      // EXISTS rather than filtering the join, so muscleGroups still lists every group of a match.
+      qb.andWhere(
+        (outer) =>
+          `EXISTS ${outer
+            .subQuery()
+            .select('1')
+            .from(ExerciseMuscleGroup, 'f')
+            .innerJoin('f.muscleGroup', 'fmg')
+            .where('f.exerciseId = e.id')
+            .andWhere('fmg.code = :muscleGroup')
+            .getQuery()}`,
+        { muscleGroup: filter.muscleGroup },
+      );
+    }
+    const rows = await qb.getMany();
+    return rows.map((exercise) => ({
+      id: exercise.id,
+      name: exercise.displayName,
+      muscleGroups: exercise.muscleGroupLinks.map((link) => link.muscleGroup.code),
+    }));
   }
 }

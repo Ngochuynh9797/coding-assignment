@@ -25,6 +25,8 @@ services:
       DB_POOL_MAX: 10
       LOG_LEVEL: info
       IDEMPOTENCY_TTL_HOURS: 24
+      # Local only: seeds the exercise catalog from config/exercise-metadata.json on startup.
+      SEED_CATALOG: 'true'
     ports:
       - '3000:3000'
     depends_on:
