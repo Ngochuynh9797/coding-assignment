@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository, type SelectQueryBuilder } from 'typeorm';
+import { type EntityManager, In, Repository, type SelectQueryBuilder } from 'typeorm';
 import { Exercise } from './entities/exercise.entity';
 import { ExerciseMuscleGroup } from './entities/exercise-muscle-group.entity';
 
@@ -33,8 +33,10 @@ export class CatalogRepository {
     private readonly muscleGroupLinks: Repository<ExerciseMuscleGroup>,
   ) {}
 
-  async findByNameKeys(keys: string[]): Promise<Map<string, ExerciseRef>> {
-    const rows = await this.exercises.find({
+  // `manager` lets the write flow read inside its transaction instead of taking a second pool connection.
+  async findByNameKeys(keys: string[], manager?: EntityManager): Promise<Map<string, ExerciseRef>> {
+    const exercises = manager ? manager.getRepository(Exercise) : this.exercises;
+    const rows = await exercises.find({
       select: { id: true, displayName: true, nameKey: true },
       where: { nameKey: In(keys) },
     });

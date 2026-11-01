@@ -36,7 +36,7 @@ Import rules (enforced by `import/no-restricted-paths`):
 - Hardcoded units (`'kg'`, `'lb'`, `@IsEnum([...])`, `if (unit === ...)`) outside the unit registry (tests excepted)
 - Server timezone in date logic (`new Date('YYYY-MM-DD')`, `getMonth()`, ...): dates are `YYYY-MM-DD` strings; periods use the user's `tz`
 - `useContainer` from class-validator
-- Raw SQL via `query(...)` outside migrations and the `/health` ping: use entity repositories, or QueryBuilder (always with bound parameters)
+- Raw SQL via `query(...)` outside migrations, the `/health` ping and the `daily_exercise_bests` upsert in `DailyBestsWriter` (per-metric `GREATEST`/`CASE` that QueryBuilder's `orUpdate` cannot express): use entity repositories, or QueryBuilder (always with bound parameters)
 - `synchronize: true` or `migration:generate`; entity columns without an explicit `name`; `NUMERIC` columns without `decimalTransformer`
 - Writes to `daily_exercise_bests` outside `DailyBestsWriter` and the rebuild job (T4.4)
 

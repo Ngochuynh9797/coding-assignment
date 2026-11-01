@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { EntityManager } from 'typeorm';
 import type { ErrorDetail } from '@shared/errors/app-exception';
 import { exerciseNotFoundError, unknownExercisesError } from './catalog.errors';
 import {
@@ -23,12 +24,15 @@ function toLikeTerm(input: string): string {
 export class CatalogService {
   constructor(private readonly repository: CatalogRepository) {}
 
-  async resolveNamesOrThrow(items: { name: string; field: string }[]): Promise<ExerciseRef[]> {
+  async resolveNamesOrThrow(
+    items: { name: string; field: string }[],
+    manager?: EntityManager,
+  ): Promise<ExerciseRef[]> {
     if (items.length === 0) {
       return [];
     }
     const keys = items.map((item) => normalizeExerciseName(item.name));
-    const found = await this.repository.findByNameKeys([...new Set(keys)]);
+    const found = await this.repository.findByNameKeys([...new Set(keys)], manager);
 
     const resolved: ExerciseRef[] = [];
     const unknown: ErrorDetail[] = [];

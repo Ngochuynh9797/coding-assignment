@@ -1,3 +1,4 @@
+import type { EntityManager } from 'typeorm';
 import { AppException } from '@shared/errors/app-exception';
 import { CatalogErrorCode } from './catalog.errors';
 import type { CatalogRepository, ExerciseRef } from './catalog.repository';
@@ -61,7 +62,7 @@ describe('CatalogService', () => {
 
       expect(result).toEqual([benchPress, benchPress, benchPress]);
       expect(repository.findByNameKeys).toHaveBeenCalledTimes(1);
-      expect(repository.findByNameKeys).toHaveBeenCalledWith(['bench press']);
+      expect(repository.findByNameKeys).toHaveBeenCalledWith(['bench press'], undefined);
     });
 
     it('reports every unknown name with its field in a single error', async () => {
@@ -82,6 +83,17 @@ describe('CatalogService', () => {
         { field: 'entries[2].exerciseName', issue: "Unknown exercise 'Squatt'" },
       ]);
       expect(repository.findByNameKeys).toHaveBeenCalledTimes(1);
+    });
+
+    it("reads through the caller's transaction when a manager is given", async () => {
+      const manager = {} as EntityManager;
+
+      await service.resolveNamesOrThrow(
+        [{ name: 'Bench Press', field: 'entries[0].exerciseName' }],
+        manager,
+      );
+
+      expect(repository.findByNameKeys).toHaveBeenCalledWith(['bench press'], manager);
     });
 
     it('does not query for an empty list', async () => {

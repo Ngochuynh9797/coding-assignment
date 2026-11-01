@@ -1,6 +1,6 @@
 # Phase 4 — Log workout
 
-**Ước lượng:** ~2h · **Phụ thuộc:** Phase 2, Phase 3 · **Trạng thái:** Chờ review
+**Ước lượng:** ~2h · **Phụ thuộc:** Phase 2, Phase 3 · **Trạng thái:** Xong
 
 Core feature 1: bulk logging nguyên tử, idempotency, cập nhật read model PR trong cùng transaction.
 
@@ -32,7 +32,8 @@ Edge case của đề: "invalid or unsupported weight units", "missing or malfor
 - Kiểm tra giới hạn theo kg và tên exercise (cần DB/converter, làm trong service ở T4.3)
 
 ### Files
-- Tạo: `src/modules/workouts/dto/log-workouts.dto.ts`, `src/modules/workouts/dto/user-id.param.ts`, `src/modules/workouts/workouts.controller.ts`, `src/modules/workouts/workouts.module.ts`, `src/modules/workouts/dto/log-workouts.dto.spec.ts`
+- Tạo: `src/modules/workouts/dto/log-workouts.dto.ts`, `src/modules/workouts/dto/user-id.param.ts`, `src/modules/workouts/workouts.controller.ts`, `src/modules/workouts/workouts.module.ts`, `src/modules/workouts/dto/log-workouts.dto.spec.ts`, `src/infrastructure/idempotency/idempotency-key.header.ts` (+ `.spec.ts`)
+- Sửa: `src/main.ts` (body parser 1 MB), `src/app.module.ts` (đăng ký `WorkoutsModule`)
 
 ### Thiết kế chi tiết
 ```ts
@@ -55,9 +56,9 @@ class UserIdParam { @IsUserId() userId: string }
 ```
 - `weight` nhận JSON number; `"100"` (string) bị từ chối (không bật implicit conversion).
 - `maxDecimalPlaces: 4` khớp cột `weight NUMERIC(10,4)`, tránh DB làm tròn ngầm giá trị gốc.
-- Header `Idempotency-Key`: tùy chọn; nếu có: 1–255 ký tự ASCII in được (`^[\x21-\x7E]{1,255}$`), sai → `VALIDATION_ERROR` với field `headers.idempotency-key`.
+- Header `Idempotency-Key`: tùy chọn; nếu có: 1–255 ký tự ASCII in được (`^[\x21-\x7E]{1,255}$`), sai → `VALIDATION_ERROR` với field `headers.idempotency-key`. Đọc bằng param decorator `@IdempotencyKeyHeader()` (vì `@Headers()` không nhận pipe). Lỗi header và lỗi body nằm ở hai bước khác nhau: request sai cả hai chỉ nhận lỗi của bước chạy trước.
 - Thứ tự set = thứ tự trong mảng → `set_index` = vị trí + 1 (client không gửi `setIndex`).
-- Body quá lớn: giới hạn body parser 1 MB.
+- Body quá lớn: giới hạn body parser 1 MB (`app.useBodyParser('json', { limit: '1mb' })` trong `main.ts`, đặt sau logger để 413 vẫn có request id).
 
 ### Tiêu chí hoàn thành
 - [ ] Mỗi edge case trong đề bài trả 400 với field path chính xác
@@ -102,7 +103,8 @@ Edge case "concurrent writes: same user logging same exercise at same time" tron
 
 ### Files
 - Tạo: `src/infrastructure/idempotency/idempotency.service.ts`, `idempotency.module.ts`, `idempotency-cleanup.job.ts`, `idempotency.errors.ts`
-- Dependency: `@nestjs/schedule`
+- Sửa: `src/app.module.ts` (`ScheduleModule.forRoot()`)
+- Dependency: `@nestjs/schedule@6.1.3` (bản 12.x là ESM-only, Jest không load được)
 
 ### Thiết kế chi tiết
 ```ts
@@ -111,19 +113,19 @@ type ClaimResult = { kind: 'new' } | { kind: 'replay'; status: number; body: unk
 claim(tx, userId: string, key: string, requestHash: string): Promise<ClaimResult>;
 complete(tx, userId: string, key: string, status: number, body: unknown): Promise<void>;
 ```
-- `claim`:
+- `claim` (QueryBuilder `insert().orIgnore().returning(['userId'])`, tương đương):
   ```sql
   INSERT INTO idempotency_keys (user_id, key, request_hash) VALUES ($1, $2, $3)
-  ON CONFLICT (user_id, key) DO NOTHING
-  RETURNING 1;
+  ON CONFLICT DO NOTHING          -- bảng chỉ có một ràng buộc unique là PK (user_id, key)
+  RETURNING user_id;
   ```
   - Có row trả về → `new`.
-  - Không có → `SELECT request_hash, response_status, response ... WHERE user_id = $1 AND key = $2`; hash khác → `IDEMPOTENCY_KEY_REUSED` (422); giống → `replay`.
+  - Không có → `findOneBy(IdempotencyKey, { userId, key })`; hash khác → `IDEMPOTENCY_KEY_REUSED` (422); giống → `replay`.
   - Khi một transaction khác đang giữ cùng key (chưa commit), `INSERT ... ON CONFLICT DO NOTHING` **chờ** transaction đó kết thúc: commit → conflict → replay; rollback → insert thành công → `new`.
-- `complete`: `UPDATE ... SET response_status = $3, response = $4`.
+- `complete`: `tx.update(IdempotencyKey, { userId, key }, { responseStatus, response })`.
 - Caller (T4.3) dùng `hashRequestBody(dto)` trên body đã validate.
 - Replay trả đúng status gốc (controller set status động qua `@Res({ passthrough: true })`) và thêm header `Idempotent-Replayed: true`.
-- Cron `@Cron(CronExpression.EVERY_HOUR)`: xóa theo lô `DELETE ... WHERE ctid IN (SELECT ctid ... WHERE created_at < now() - $ttl LIMIT 5000)` lặp đến khi hết; chạy trên nhiều replica cùng lúc cũng vô hại.
+- Cron `@Cron(CronExpression.EVERY_HOUR)`: mốc `idempotencyCutoff(now, IDEMPOTENCY_TTL_HOURS)` tính trong ứng dụng rồi bind làm tham số; xóa theo lô bằng QueryBuilder `DELETE ... WHERE ctid IN (SELECT k.ctid ... WHERE created_at < :cutoff LIMIT 5000)` lặp đến khi hết; chạy trên nhiều replica cùng lúc cũng vô hại.
 - Key đã quá TTL nhưng chưa bị dọn vẫn được replay (đơn giản, không gây sai).
 
 ### Tiêu chí hoàn thành
@@ -165,24 +167,16 @@ Core feature 1: "log a workout entry", "support bulk logging", "store a normaliz
 
 ### Files
 - Tạo: `src/modules/workouts/workouts.service.ts`, `src/modules/workouts/workouts.repository.ts`, `src/modules/personal-records/daily-bests.writer.ts`, `src/modules/personal-records/personal-records.module.ts`
-- Sửa: `src/modules/workouts/workouts.controller.ts`, `src/modules/workouts/workouts.module.ts`
-- Dependency: `uuid` (hàm `v7`)
+- Sửa: `src/modules/workouts/workouts.controller.ts`, `src/modules/workouts/workouts.module.ts`, `src/modules/catalog/catalog.service.ts` + `catalog.repository.ts` (nhận `EntityManager` tùy chọn), `src/modules/catalog/catalog.service.spec.ts`
+- Dependency: `uuid@11.1.1` (hàm `v7`; bản 12+ là ESM-only)
 
 ### Thiết kế chi tiết
 Trong **1 transaction** (`READ COMMITTED`):
 1. Nếu có `Idempotency-Key`: `claim` → `replay` thì trả ngay.
-2. `CatalogService.resolveNamesOrThrow` (1 query) → `UNKNOWN_EXERCISE` liệt kê mọi field path.
+2. `CatalogService.resolveNamesOrThrow(items, tx)` (1 query, chạy trên connection của transaction thay vì chiếm thêm một connection trong pool) → `UNKNOWN_EXERCISE` liệt kê mọi field path.
 3. Với từng set: `weightKg = toStoredKg(weight, unit)`; `weightKg > 1000` → `VALIDATION_ERROR` field `entries[i].sets[j].weight`, issue `exceeds maximum of 1000 kg`. Gom **mọi** lỗi rồi ném một lần.
-4. Sinh UUIDv7 cho mọi entry và set **theo thứ tự trong request**; insert bằng `unnest` (số tham số cố định, không phụ thuộc kích thước bulk):
-   ```sql
-   INSERT INTO workout_entries (id, user_id, exercise_id, performed_on)
-   SELECT * FROM unnest($1::uuid[], $2::text[], $3::int[], $4::date[]);
-
-   INSERT INTO workout_sets (id, entry_id, set_index, reps, weight, unit, weight_kg)
-   SELECT * FROM unnest($1::uuid[], $2::uuid[], $3::smallint[], $4::int[], $5::numeric[], $6::text[], $7::numeric[]);
-   ```
-   Numeric truyền dạng string (`Decimal.toFixed(4)`).
-5. `DailyBestsWriter.applySets(tx, userId, sets)`: `bestsByGroup(sets)` → upsert:
+4. Sinh UUIDv7 cho mọi entry và set **theo thứ tự trong request**; insert mỗi bảng bằng một câu multi-row `VALUES` qua QueryBuilder (`insert().into(...).values(rows).updateEntity(false)`, không có `RETURNING`). Numeric đi qua `decimalTransformer` (`Decimal` → string). Số tham số tăng theo kích thước bulk: ở giới hạn DTO (100 entries × 50 sets) câu insert sets bind 35k tham số, dưới giới hạn 65535 của PostgreSQL; nếu nâng giới hạn DTO thì phải chia lô trong `WorkoutsRepository`.
+5. `DailyBestsWriter.applySets(tx, userId, sets)`: `bestsByGroup(sets)` → `upsertBests` (câu SQL thô duy nhất ngoài migration và `/health`, vì `orUpdate` của TypeORM chỉ sinh được `col = EXCLUDED.col`; numeric truyền dạng `Decimal.toFixed(4)`):
    ```sql
    INSERT INTO daily_exercise_bests AS d (user_id, exercise_id, performed_on,
      best_weight_kg, best_weight_set_id, best_volume_kg, best_volume_set_id, best_e1rm_kg, best_e1rm_set_id)
@@ -225,7 +219,7 @@ feat(workouts): implement transactional bulk logging with daily bests upsert
 - AI hay insert từng entry trong vòng lặp hoặc dùng `Promise.all` ngoài transaction.
 - AI hay dùng `INSERT ... RETURNING` rồi ghép id theo thứ tự → Postgres không cam kết thứ tự đó.
 - Thiếu `ORDER BY` trong upsert → nguy cơ deadlock khi 2 bulk request song song.
-- Kiểm tra lại `uuid` v7 có đảm bảo tăng dần khi sinh nhiều id trong cùng 1 ms (cần cho tie-break của rebuild ở T4.4); nếu không, rebuild phải sắp theo thứ tự khác.
+- Kiểm tra lại `uuid` v7 có đảm bảo tăng dần khi sinh nhiều id trong cùng 1 ms (cần cho tie-break của rebuild ở T4.4); nếu không, rebuild phải sắp theo thứ tự khác. **Đã kiểm:** `uuid@11` tăng `seq` khi cùng ms (tràn thì tăng ms), có unit test 10k id tăng nghiêm ngặt.
 
 ---
 
@@ -247,20 +241,21 @@ Hiện thực tính chất "read model rebuildable from the workout log" trong S
 
 ### Files
 - Tạo: `src/modules/personal-records/rebuild-daily-bests.ts`, `src/modules/personal-records/daily-bests-rebuilder.service.ts`
-- Sửa: `package.json`
+- Sửa: `package.json`, `src/shared/validation/is-user-id.ts` (export `isUserId` để kiểm tra `--user`)
 
 ### Thiết kế chi tiết
 - Duyệt từng user (`SELECT DISTINCT user_id FROM workout_entries`, hoặc chỉ user được chỉ định).
 - Với mỗi user, trong 1 transaction:
-  1. Đọc set theo thứ tự tái hiện đúng thứ tự ghi:
+  1. Đọc set theo thứ tự tái hiện đúng thứ tự ghi (QueryBuilder theo **tên bảng**, vì `personal-records` không được import entity của `workouts`; `performed_on` lấy qua `to_char(..., 'YYYY-MM-DD')` vì `pg` mặc định parse `DATE` thành JS `Date` theo timezone của server):
      ```sql
-     SELECT s.id, e.exercise_id, e.performed_on, s.reps, s.weight_kg
+     SELECT s.id, e.exercise_id, to_char(e.performed_on, 'YYYY-MM-DD'), s.reps, s.weight_kg
      FROM workout_sets s JOIN workout_entries e ON e.id = s.entry_id
      WHERE e.user_id = $1
      ORDER BY e.created_at, e.id, s.set_index;
      ```
-  2. `bestsByGroup` → `DELETE FROM daily_exercise_bests WHERE user_id = $1` → insert lại (cùng câu `unnest` như writer, không cần `ON CONFLICT`).
-- Log số user / số row đã ghi và thời gian chạy.
+  2. `bestsByGroup` → `tx.delete(DailyExerciseBest, { userId })` → `DailyBestsWriter.upsertBests` (cùng câu `unnest` với writer; bảng vừa bị xóa nên `ON CONFLICT` không bao giờ kích hoạt).
+- Log số user / số row đã ghi và thời gian chạy. Tham số lạ hoặc `--user` sai định dạng → lỗi, exit code 1.
+- Không chạy khi user đó đang ghi: request commit giữa lúc đọc và lúc `DELETE` sẽ mất bests cho tới lần rebuild sau.
 
 ### Tiêu chí hoàn thành
 - [ ] Chạy trên dữ liệu đã ghi incremental (tuần tự) → bảng giống hệt trước khi chạy
