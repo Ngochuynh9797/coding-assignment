@@ -29,6 +29,9 @@ export default tseslint.config(
         'error',
         {
           zones: [
+            { target: './src/config', from: './src/modules' },
+            { target: './src/common', from: './src/modules' },
+            { target: './src/health', from: './src/modules' },
             { target: './src/infrastructure', from: './src/modules' },
             { target: './src/shared', from: './src/modules' },
             { target: './src/shared', from: './src/infrastructure/database' },

@@ -1,10 +1,16 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@infra/config/config.module';
-import { HealthModule } from '@infra/health/health.module';
-import { HttpModule } from '@infra/http/http.module';
-import { LoggingModule } from '@infra/logging/logging.module';
+import { APP_FILTER, APP_PIPE } from '@nestjs/core';
+import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter';
+import { LoggingModule } from '@common/logging/logging.module';
+import { createValidationPipe } from '@common/pipes/validation.pipe';
+import { ConfigModule } from '@config/config.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
-  imports: [ConfigModule, LoggingModule, HttpModule, HealthModule],
+  imports: [ConfigModule, LoggingModule, HealthModule],
+  providers: [
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    { provide: APP_PIPE, useFactory: createValidationPipe },
+  ],
 })
 export class AppModule {}

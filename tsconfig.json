@@ -23,6 +23,8 @@
     "resolveJsonModule": true,
     "types": ["node", "jest"],
     "paths": {
+      "@config/*": ["src/config/*"],
+      "@common/*": ["src/common/*"],
       "@infra/*": ["src/infrastructure/*"],
       "@shared/*": ["src/shared/*"],
       "@modules/*": ["src/modules/*"]

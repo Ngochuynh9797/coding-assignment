@@ -1,4 +1,4 @@
-import { parseEnv } from './env.schema';
+import { parseEnv } from './env.validation';
 
 const DATABASE_URL = 'postgres://workout:secret@localhost:5432/workout';
 

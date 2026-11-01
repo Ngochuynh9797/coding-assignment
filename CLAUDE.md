@@ -13,12 +13,17 @@ If the code you are about to write differs from these, **stop and ask**. Do not 
 ## Layers
 ```
 src/
-  infrastructure/   config, logging, database, http, idempotency, health
+  config/           env validation (zod) + ConfigModule
+  common/           Nest cross-cutting, no business logic: filters, pipes, logging
   shared/           pure code: units, date, pagination, validation, errors
+  infrastructure/   external systems: database, idempotency
+  health/           GET /health
   modules/          catalog, workouts, personal-records
 ```
+Global filter and pipe are registered in `app.module.ts` (`APP_FILTER`, `APP_PIPE`).
+
 Import rules (enforced by `import/no-restricted-paths`):
-- `infrastructure/` and `shared/` never import from `modules/`
+- `config/`, `common/`, `shared/`, `infrastructure/`, `health/` never import from `modules/`
 - `shared/` never imports from `infrastructure/database` (no DB access in `shared/`)
 - Modules depend one way only: `workouts → catalog`, `workouts → personal-records`, `personal-records → catalog`
 

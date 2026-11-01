@@ -35,7 +35,7 @@ Hiện thực đúng `docs/SCHEMA.md` (tiêu chí "schema design, indexing strat
 
 ### Files
 - Tạo: `src/infrastructure/database/data-source.ts`, `src/infrastructure/database/database.module.ts`, `src/infrastructure/database/transaction.ts`, `src/infrastructure/database/migrations/0001-init.ts`, `src/infrastructure/database/migrate.ts`
-- Sửa: `docker/entrypoint.sh`, `package.json` (`migration:run`, `migration:revert`), `src/infrastructure/health/health.controller.ts`, `src/infrastructure/health/health.module.ts`
+- Sửa: `docker/entrypoint.sh`, `package.json` (`migration:run`, `migration:revert`), `src/health/health.controller.ts`, `src/health/health.module.ts`
 
 ### Thiết kế chi tiết
 ```sql

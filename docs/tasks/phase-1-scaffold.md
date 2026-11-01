@@ -21,13 +21,13 @@ Dựng khung NestJS 3 tầng, config, logging, error format và Docker để m�
 **Phase:** 1 · **Ước lượng:** 30m · **Phụ thuộc:** T0.3
 
 ### Mục tiêu
-Dựng khung project với cấu trúc 3 tầng (`infrastructure/`, `shared/`, `modules/`) và để ESLint enforce quy tắc phụ thuộc ngay từ đầu (tiêu chí "separation of concerns").
+Dựng khung project theo cấu trúc `config/`, `common/`, `shared/`, `infrastructure/`, `health/`, `modules/` và để ESLint enforce quy tắc phụ thuộc ngay từ đầu (tiêu chí "separation of concerns").
 
 ### Phạm vi
 **Làm**
 - Khởi tạo NestJS (Node 22 LTS, TypeScript strict), ESLint + Prettier
-- Tạo thư mục rỗng có `.gitkeep` cho 3 tầng
-- Path alias `@infra/*`, `@shared/*`, `@modules/*` (tsconfig + Jest)
+- Tạo thư mục rỗng có `.gitkeep` cho các tầng chưa có code
+- Path alias `@config/*`, `@common/*`, `@shared/*`, `@infra/*`, `@modules/*` (tsconfig + Jest)
 - Rule ESLint `import/no-restricted-paths`
 - npm scripts
 
@@ -37,13 +37,16 @@ Dựng khung project với cấu trúc 3 tầng (`infrastructure/`, `shared/`, `
 
 ### Files
 - Tạo: `package.json`, `tsconfig.json`, `tsconfig.build.json`, `nest-cli.json`, `eslint.config.mjs`, `.prettierrc`, `jest.config.ts`, `src/main.ts`, `src/app.module.ts`
-- Tạo thư mục: `src/infrastructure/`, `src/shared/`, `src/modules/`, `test/e2e/`
+- Tạo thư mục: `src/infrastructure/`, `src/shared/`, `src/modules/`, `test/e2e/` (`config/`, `common/`, `health/` được tạo ở T1.2–T1.4)
 
 ### Thiết kế chi tiết
-- `tsconfig`: `strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: false` (tránh xung đột với class-validator), `paths` cho 3 alias.
+- `tsconfig`: `strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: false` (tránh xung đột với class-validator), `paths` cho các alias trên.
 - `eslint.config.mjs` (flat config) + `eslint-plugin-import`:
   ```js
   'import/no-restricted-paths': ['error', { zones: [
+    { target: './src/config', from: './src/modules' },
+    { target: './src/common', from: './src/modules' },
+    { target: './src/health', from: './src/modules' },
     { target: './src/infrastructure', from: './src/modules' },
     { target: './src/shared', from: './src/modules' },
     { target: './src/shared', from: './src/infrastructure/database' },
@@ -70,7 +73,7 @@ chore: scaffold NestJS project with layered structure and import boundaries
 ```
 
 ### Rủi ro / điểm cần soi khi review code AI
-- AI thường giữ lại `AppController` mẫu và `src/common/` theo thói quen → không đúng cấu trúc đã chốt.
+- AI thường giữ lại `AppController` mẫu của Nest CLI → không đúng cấu trúc đã chốt. `src/common/` chỉ chứa phần Nest cross-cutting (filters, pipes, logging), không chứa code thuần (thuộc `shared/`) hay business logic.
 - Alias phải khai báo ở cả `tsconfig` và `jest.config` (`moduleNameMapper`), thiếu một chỗ thì test lỗi import.
 - `eslint-plugin-import` cần resolver TypeScript (`eslint-import-resolver-typescript`) để hiểu alias; thiếu thì rule im lặng không chạy → phải thử vi phạm thật để chắc rule hoạt động.
 
@@ -94,7 +97,7 @@ Production readiness: configuration management (validate env, fail fast) và str
 - Chưa kết nối DB (T3.1), chỉ khai báo biến
 
 ### Files
-- Tạo: `src/infrastructure/config/env.schema.ts`, `src/infrastructure/config/config.module.ts`, `src/infrastructure/logging/logging.module.ts`, `.env.example`
+- Tạo: `src/config/env.validation.ts`, `src/config/config.module.ts`, `src/common/logging/logging.module.ts`, `.env.example`
 - Sửa: `src/app.module.ts`, `src/main.ts`
 
 ### Thiết kế chi tiết
@@ -124,7 +127,7 @@ Production readiness: configuration management (validate env, fail fast) và str
 - [ ] Gửi `x-request-id: abc` → log và response header dùng `abc`
 
 ### Tests
-- Unit: `env.schema.spec.ts` — env hợp lệ, thiếu biến bắt buộc, `PORT` không phải số, áp mặc định.
+- Unit: `env.validation.spec.ts` — env hợp lệ, thiếu biến bắt buộc, `PORT` không phải số, áp mặc định.
 
 ### Commit dự kiến
 ```
@@ -156,10 +159,10 @@ Tiêu chí "consistent error responses, structured error responses, validation a
 - Các lỗi nghiệp vụ cụ thể (`UNKNOWN_EXERCISE`...) được định nghĩa trong module của chúng
 
 ### Files
-- Tạo: `src/shared/errors/app-exception.ts`, `src/shared/errors/error-codes.ts`, `src/infrastructure/http/all-exceptions.filter.ts`, `src/infrastructure/http/validation.pipe.ts`, `src/infrastructure/http/http.module.ts`
-- Sửa: `src/main.ts` (hoặc đăng ký qua `APP_FILTER` / `APP_PIPE`)
+- Tạo: `src/shared/errors/app-exception.ts`, `src/shared/errors/error-codes.ts`, `src/common/filters/all-exceptions.filter.ts`, `src/common/pipes/validation.pipe.ts`
+- Sửa: `src/app.module.ts` (đăng ký qua `APP_FILTER` / `APP_PIPE`)
 
-> `AppException` đặt ở `shared/errors/` (không ở `infrastructure/http/`) để code trong `shared/` (ví dụ cursor) ném lỗi được mà không phải import tầng infrastructure.
+> `AppException` đặt ở `shared/errors/` (không ở `common/filters/`) để code trong `shared/` (ví dụ cursor) ném lỗi được mà không phải import tầng Nest cross-cutting.
 
 ### Thiết kế chi tiết
 - `AppException(code, httpStatus, message, details?: { field: string; issue: string }[])`.
@@ -220,7 +223,7 @@ Deliverable "setup must work with `docker compose up`" và tiêu chí "Docker se
 - Không kiểm tra DB trong `/health`: chưa có kết nối DB (T3.1), DB check được nối vào ở T3.1
 
 ### Files
-- Tạo: `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `docker/entrypoint.sh`, `src/infrastructure/health/health.controller.ts`, `src/infrastructure/health/health.module.ts`, `config/.gitkeep` (để `COPY config/` không lỗi trước T3.2)
+- Tạo: `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `docker/entrypoint.sh`, `src/health/health.controller.ts`, `src/health/health.module.ts`, `config/.gitkeep` (để `COPY config/` không lỗi trước T3.2)
 
 ### Thiết kế chi tiết
 - **Dockerfile**: stage `deps` (`npm ci`), stage `build` (`npm run build`, `npm prune --omit=dev --omit=optional`: `ts-node`/`typescript` là optional peer của `typeorm`, bị npm đánh dấu `devOptional` nên `--omit=dev` không loại), stage `runtime` (`node:22-alpine`, user `node` không phải root, chỉ copy `dist/`, `node_modules/`, `config/`, `package.json`). `HEALTHCHECK` gọi `/api/v1/health`.

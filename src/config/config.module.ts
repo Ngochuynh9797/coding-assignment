@@ -1,5 +1,5 @@
 import { Global, Inject, Module } from '@nestjs/common';
-import { parseEnv } from './env.schema';
+import { parseEnv } from './env.validation';
 
 export const APP_CONFIG = Symbol('APP_CONFIG');
 

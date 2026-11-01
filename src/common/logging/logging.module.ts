@@ -3,8 +3,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Module } from '@nestjs/common';
 import { LoggerModule } from 'nestjs-pino';
 import { type HttpLogger, pinoHttp } from 'pino-http';
-import { APP_CONFIG } from '../config/config.module';
-import type { AppConfig } from '../config/env.schema';
+import { APP_CONFIG } from '@config/config.module';
+import type { AppConfig } from '@config/env.validation';
 
 export const HTTP_LOGGER = Symbol('HTTP_LOGGER');
 
