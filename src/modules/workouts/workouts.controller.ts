@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { IdempotencyKeyHeader } from '@infra/idempotency/idempotency-key.header';
+import { UserIdParam } from '@shared/validation/user-id.param';
 import { HistoryQueryDto } from './dto/history.query';
 import { LogWorkoutsDto } from './dto/log-workouts.dto';
-import { UserIdParam } from './dto/user-id.param';
 import type { HistoryResponse } from './history.mapper';
 import { WorkoutHistoryService } from './workout-history.service';
 import { WorkoutsService } from './workouts.service';

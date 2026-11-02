@@ -1,5 +1,10 @@
 import { Decimal } from 'decimal.js';
-import { normalizeUnitCode, SUPPORTED_UNIT_CODES, WEIGHT_UNITS } from './unit.registry';
+import {
+  BASE_UNIT_CODE,
+  normalizeUnitCode,
+  SUPPORTED_UNIT_CODES,
+  WEIGHT_UNITS,
+} from './unit.registry';
 
 describe('WEIGHT_UNITS invariants', () => {
   it('has unique codes', () => {
@@ -24,6 +29,11 @@ describe('WEIGHT_UNITS invariants', () => {
 
   it('derives SUPPORTED_UNIT_CODES from the registry', () => {
     expect(SUPPORTED_UNIT_CODES).toEqual(WEIGHT_UNITS.map((u) => u.code));
+  });
+
+  it('has exactly one base unit (kgPerUnit 1), exposed as BASE_UNIT_CODE', () => {
+    const base = WEIGHT_UNITS.filter((u) => new Decimal(u.kgPerUnit).eq(1));
+    expect(base.map((u) => u.code)).toEqual([BASE_UNIT_CODE]);
   });
 });
 

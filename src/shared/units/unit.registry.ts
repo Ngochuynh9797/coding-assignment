@@ -24,6 +24,17 @@ export const WEIGHT_UNITS: readonly WeightUnitDef[] = [
 
 export const SUPPORTED_UNIT_CODES: string[] = WEIGHT_UNITS.map((u) => u.code);
 
+function baseUnitCode(): string {
+  const base = WEIGHT_UNITS.find((u) => u.kgPerUnit === '1');
+  if (!base) {
+    throw new Error("The unit registry has no base unit (kgPerUnit '1')");
+  }
+  return base.code;
+}
+
+// The unit stored values are normalized to; used where an output unit must not depend on the input.
+export const BASE_UNIT_CODE: string = baseUnitCode();
+
 export const WEIGHT_UNITS_TOKEN = Symbol('WEIGHT_UNITS');
 
 const CODE_BY_NAME = new Map(

@@ -1,4 +1,4 @@
-import { IsUserId } from '@shared/validation/is-user-id';
+import { IsUserId } from './is-user-id';
 
 export class UserIdParam {
   @IsUserId()

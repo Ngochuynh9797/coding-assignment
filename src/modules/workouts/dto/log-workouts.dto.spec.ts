@@ -3,8 +3,8 @@ import type { ArgumentMetadata } from '@nestjs/common';
 import { createValidationPipe } from '@common/pipes/validation.pipe';
 import { AppException, type ErrorDetail } from '@shared/errors/app-exception';
 import { SUPPORTED_UNIT_CODES } from '@shared/units/unit.registry';
+import { UserIdParam } from '@shared/validation/user-id.param';
 import { LogWorkoutsDto } from './log-workouts.dto';
-import { UserIdParam } from './user-id.param';
 
 const body: ArgumentMetadata = { type: 'body', metatype: LogWorkoutsDto };
 const param: ArgumentMetadata = { type: 'param', metatype: UserIdParam };

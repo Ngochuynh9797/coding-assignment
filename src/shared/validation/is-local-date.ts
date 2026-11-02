@@ -5,7 +5,7 @@ export interface IsLocalDateOptions {
   maxFutureDays?: number;
 }
 
-const FORMAT_MESSAGE = 'must be a valid date in YYYY-MM-DD format';
+export const LOCAL_DATE_FORMAT_MESSAGE = 'must be a valid date in YYYY-MM-DD format';
 
 export function IsLocalDate(
   options: IsLocalDateOptions = {},
@@ -22,7 +22,7 @@ export function IsLocalDate(
         defaultMessage: (args?: ValidationArguments) =>
           isValidLocalDate(args?.value)
             ? `must be at most ${maxFutureDays} day(s) after the current UTC date`
-            : FORMAT_MESSAGE,
+            : LOCAL_DATE_FORMAT_MESSAGE,
       },
     },
     validationOptions,

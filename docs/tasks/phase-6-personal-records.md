@@ -1,6 +1,6 @@
 # Phase 6 — Personal records
 
-**Ước lượng:** ~1.5h · **Phụ thuộc:** Phase 4 · **Trạng thái:** Chờ review
+**Ước lượng:** ~1.5h · **Phụ thuộc:** Phase 4 · **Trạng thái:** Xong
 
 Core feature 3: PR theo khoảng ngày và so sánh 2 kỳ theo timezone.
 
@@ -48,6 +48,7 @@ SELECT b.metric, b.performed_on, b.value_kg, s.id AS set_id, s.reps, s.weight, s
 FROM bests b
 JOIN workout_sets s ON s.id = b.set_id;
 ```
+- Đã chốt: CLAUDE.md cấm `query(...)` ở đây và QueryBuilder không có `UNION`, nên mỗi nhánh được dựng bằng một QueryBuilder riêng (`getQuery()`, bọc ngoặc), nối `UNION ALL` rồi đưa vào `addCommonTableExpression(…, 'bests')` của query chính. Tham số bind theo tên một lần ở query ngoài, tên metric cũng bind (`CAST(:maxWeight AS text)`). SQL sinh ra giống hệt khối trên, vẫn 1 round-trip, chạy bằng `getRawMany()`.
 - Cả 3 nhánh dùng range scan trên PK `(user_id, exercise_id, performed_on)`; số row mỗi `(user, exercise)` bằng số ngày tập nên sort nhỏ.
 - `JOIN workout_sets` là ngoại lệ đọc chéo bảng đã ghi trong plan (chỉ đọc, 1 query) — để lấy `reps` và `weight`/`unit` gốc của set thắng.
 - Trả về `Map<metric, RecordRow | null>`; numeric parse thành `Decimal`; `performed_on` dạng string.
@@ -88,11 +89,13 @@ Endpoint PR cho một user và một exercise, có khoảng ngày tùy chọn, �
 - So sánh 2 khoảng (T6.3)
 
 ### Files
-- Tạo: `src/modules/personal-records/personal-records.controller.ts`, `personal-records.service.ts`, `dto/personal-records.query.ts`, `pr.mapper.ts`, `pr.mapper.spec.ts`
-- Sửa: `src/modules/personal-records/personal-records.module.ts`
+- Tạo: `src/modules/personal-records/personal-records.controller.ts`, `personal-records.service.ts`, `dto/personal-records.query.ts`, `pr.mapper.ts`, `pr.mapper.spec.ts`, `src/shared/validation/is-on-or-before.ts` (+ spec)
+- Chuyển: `src/modules/workouts/dto/user-id.param.ts` → `src/shared/validation/user-id.param.ts` (personal-records không được import từ workouts)
+- Sửa: `src/modules/personal-records/personal-records.module.ts`, `src/modules/workouts/workouts.controller.ts` (import)
 
 ### Thiết kế chi tiết
-- Query: `exercise` (bắt buộc, tên khớp chính xác sau normalize), `from`, `to` (`@IsLocalDate`, `from ≤ to`), `unit` (tùy chọn, normalize + `@IsIn`).
+- Query: `exercise` (bắt buộc, tên khớp chính xác sau normalize, không được rỗng/chỉ khoảng trắng), `from`, `to` (`@IsLocalDate`, `from ≤ to`), `unit` (tùy chọn, normalize + `@IsIn`).
+- Đã chốt: `from ≤ to` kiểm tra trong DTO bằng decorator dùng chung `@IsOnOrBefore('to')` (chỉ so khi cả 2 là ngày hợp lệ), nên lỗi range trả cùng các lỗi DTO khác. History giữ nguyên `assertRange` trong service.
 - Exercise không có trong catalog → `404 EXERCISE_NOT_FOUND`.
 - Response `200`:
   ```json
@@ -153,15 +156,16 @@ feat(personal-records): expose GET personal records with unit conversion
 - So sánh nhiều hơn 2 khoảng, chuỗi theo thời gian (time series)
 
 ### Files
-- Tạo: `src/modules/personal-records/dto/compare.query.ts`, `src/modules/personal-records/pr-delta.ts`, `src/modules/personal-records/pr-delta.spec.ts`
-- Sửa: `personal-records.controller.ts`, `personal-records.service.ts`
+- Tạo: `src/modules/personal-records/dto/compare.query.ts`, `dto/compare.query.spec.ts`, `src/modules/personal-records/pr-delta.ts`, `src/modules/personal-records/pr-delta.spec.ts`
+- Sửa: `personal-records.controller.ts`, `personal-records.service.ts`, `src/shared/units/unit.registry.ts` (+ spec, `BASE_UNIT_CODE`), `src/shared/validation/is-local-date.ts` (export message định dạng)
 
 ### Thiết kế chi tiết
 - Query, đúng **một** trong hai dạng:
   - Preset: `period=week|month|year`, `tz` (IANA, mặc định `UTC`), `anchor` (tùy chọn, `YYYY-MM-DD`, mặc định hôm nay theo `tz`) → `periodRanges` (T2.4).
   - Custom: `baseFrom`, `baseTo`, `compareFrom`, `compareTo` (đủ cả 4).
   - Trộn 2 dạng hoặc thiếu → `VALIDATION_ERROR`.
-- `unit` mặc định **`kg`** (2 kỳ phải cùng unit thì delta mới có nghĩa).
+- `unit` mặc định **`kg`** (2 kỳ phải cùng unit thì delta mới có nghĩa). Đã chốt: lấy từ `BASE_UNIT_CODE` của unit registry (entry có `kgPerUnit === '1'`), không hardcode `'kg'` trong DTO.
+- Đã chốt: `tz` không có default trong DTO (service dùng `UTC`), nếu không request dạng custom nào cũng bị coi là trộn. Không gửi dạng nào → lỗi ở `period`; trộn → lỗi `must not be combined with …` ở từng trường preset; custom thiếu trường → một lỗi `is required …` ở đúng trường đó.
 - Chạy 2 truy vấn song song (`Promise.all`), mỗi kỳ trả cùng shape `records` như T6.2.
 - Delta cho từng metric (tính bằng `Decimal`, trên kg rồi đổi unit):
   | current | previous | absolute | percent | improved |
