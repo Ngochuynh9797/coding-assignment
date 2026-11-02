@@ -4,7 +4,7 @@ PostgreSQL 18. All timestamps are stored in UTC (`TIMESTAMPTZ`); workout days ar
 
 ## Assumption: exercises are a curated catalog
 
-- Exercises are **managed by an admin**. In this project the catalog is seeded from `config/exercise-metadata.json` (run automatically by `docker compose up`, which sets `SEED_CATALOG=true`); in production an admin tool would own it and the seeder would not run. An admin API is out of scope.
+- Exercises are **managed by an admin**. In this project the catalog is seeded from `config/exercise-metadata.json` (run automatically by `docker compose up` through its one-shot `seed-catalog` service; the image itself never seeds); in production an admin tool would own it and the seeder would not run. An admin API is out of scope.
 - Users cannot create exercises. A user can only log entries for exercises that already exist in the catalog.
 - The log API accepts `exerciseName` (as the assignment requires) and **resolves it to `exercise_id`** before saving. Unknown names are rejected with `400 UNKNOWN_EXERCISE` and nothing is saved.
 - Name matching is case- and whitespace-insensitive: `Bench Press`, `bench press` and ` BENCH  PRESS ` all resolve to the same exercise.

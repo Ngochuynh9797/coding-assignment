@@ -1,5 +1,5 @@
 import { roundForOutput, type UnitConverter } from '@shared/units/unit-converter';
-import type { HistoryPage, HistorySetRow } from './workouts.repository';
+import type { HistoryPage, HistorySetRow } from './workout-history.repository';
 
 export interface HistorySet {
   setIndex: number;

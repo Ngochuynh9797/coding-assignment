@@ -19,7 +19,7 @@
     "migration:run": "nest build && node --env-file-if-exists=.env dist/infrastructure/database/migrate.js run",
     "migration:revert": "nest build && node --env-file-if-exists=.env dist/infrastructure/database/migrate.js revert",
     "seed:catalog": "nest build && node --env-file-if-exists=.env dist/seeds/catalog/seed-catalog.js",
-    "rebuild:bests": "nest build && node --env-file-if-exists=.env dist/modules/personal-records/rebuild-daily-bests.js",
+    "rebuild:bests": "nest build && node --env-file-if-exists=.env dist/modules/personal-records/daily-bests/rebuild-daily-bests.js",
     "seed:large": "node --env-file-if-exists=.env -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/seed-large.ts",
     "perf:explain": "node --env-file-if-exists=.env -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/explain-queries.ts"
   },

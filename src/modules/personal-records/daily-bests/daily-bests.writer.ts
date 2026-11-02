@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
-import { bestsByGroup, type DailyBest, type PrSetInput } from './domain/pr-calculator';
+import { bestsByGroup, type DailyBest, type PrSetInput } from '../domain/pr-calculator';
 
 // The only raw SQL outside migrations and /health: TypeORM's orUpdate can only emit
 // `col = EXCLUDED.col`, not a per-metric GREATEST with a conditional set id.

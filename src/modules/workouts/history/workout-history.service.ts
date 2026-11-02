@@ -4,16 +4,16 @@ import { AppException } from '@shared/errors/app-exception';
 import { ErrorCode } from '@shared/errors/error-codes';
 import { decodeCursor } from '@shared/pagination/cursor';
 import { UnitConverter } from '@shared/units/unit-converter';
-import type { HistoryQueryDto } from './dto/history.query';
+import type { HistoryQueryDto } from './history.query';
 import type { HistoryPageParams } from './history-query.builder';
 import { emptyHistoryResponse, type HistoryResponse, toHistoryResponse } from './history.mapper';
-import { WorkoutsRepository } from './workouts.repository';
+import { WorkoutHistoryRepository } from './workout-history.repository';
 
 @Injectable()
 export class WorkoutHistoryService {
   constructor(
     private readonly catalog: CatalogService,
-    private readonly repository: WorkoutsRepository,
+    private readonly repository: WorkoutHistoryRepository,
     private readonly converter: UnitConverter,
   ) {}
 

@@ -19,9 +19,9 @@ COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY config ./config
-COPY --chmod=755 docker/entrypoint.sh ./docker/entrypoint.sh
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=3 \
   CMD wget -q -O /dev/null "http://127.0.0.1:${PORT:-3000}/api/v1/health" || exit 1
-ENTRYPOINT ["./docker/entrypoint.sh"]
+# Exec form: node is PID 1 and receives SIGTERM from `docker compose down`.
+CMD ["node", "dist/main.js"]

@@ -27,7 +27,7 @@ Hiện thực đúng `docs/SCHEMA.md` (tiêu chí "schema design, indexing strat
 - TypeORM `DataSource` (dùng chung cho app và CLI migration)
 - `DatabaseModule` + helper transaction
 - Migration `0001-init`
-- Script `migrate` (chạy trong entrypoint Docker)
+- Script `migrate` (chạy bởi service `migrate` trong docker compose, không nằm trong image)
 - Nối DB check vào `GET /health` (dời từ T1.4): `SELECT 1` với timeout ngắn; OK → `200 { status: "ok", db: "up" }`; lỗi → `503 SERVICE_UNAVAILABLE` theo error format chung
 
 **Không làm**
@@ -35,7 +35,7 @@ Hiện thực đúng `docs/SCHEMA.md` (tiêu chí "schema design, indexing strat
 
 ### Files
 - Tạo: `src/infrastructure/database/data-source.ts`, `src/infrastructure/database/database.module.ts`, `src/infrastructure/database/transaction.ts`, `src/infrastructure/database/migrations/0001-init.ts`, `src/infrastructure/database/migrate.ts`, `src/infrastructure/database/decimal.transformer.ts` (NUMERIC ↔ `Decimal`), entity: `src/modules/catalog/entities/*`, `src/modules/workouts/entities/*`, `src/modules/personal-records/entities/daily-exercise-best.entity.ts`, `src/infrastructure/idempotency/idempotency-key.entity.ts` (DataSource nạp entity bằng glob `*.entity` vì `infrastructure/` không được import `modules/`)
-- Sửa: `docker/entrypoint.sh`, `package.json` (`migration:run`, `migration:revert`), `src/health/health.controller.ts`, `src/health/health.module.ts`
+- Sửa: `docker-compose.yml` (service `migrate`), `package.json` (`migration:run`, `migration:revert`), `src/health/health.controller.ts`, `src/health/health.module.ts`
 
 ### Thiết kế chi tiết
 ```sql
@@ -146,14 +146,14 @@ Yêu cầu "exercise → muscle group mapping should be configurable (not hardco
 ### Phạm vi
 **Làm**
 - `config/exercise-metadata.json` (~60 bài phổ biến)
-- Seeder idempotent, chạy trong entrypoint Docker và trong e2e setup
+- Seeder idempotent, chạy bởi service `seed-catalog` trong docker compose và trong e2e setup
 
 **Không làm**
 - Admin API (ngoài phạm vi)
 
 ### Files
 - Tạo: `config/exercise-metadata.json`, `src/seeds/catalog/catalog.seeder.ts`, `src/seeds/catalog/catalog-metadata.schema.ts`, `src/seeds/catalog/seed-catalog.ts` (entry chạy độc lập). Seed là dữ liệu cho local/test nên nằm ở layer `seeds/`, tách khỏi logic nghiệp vụ của `modules/catalog` (không layer nào được import `seeds/`)
-- Sửa: `docker/entrypoint.sh` (chỉ seed khi `SEED_CATALOG=true`), `docker-compose.yml` (bật `SEED_CATALOG`), `package.json` (`seed:catalog`), `eslint.config.mjs` (cấm import `seeds/`)
+- Sửa: `docker-compose.yml` (service `seed-catalog`, chạy sau `migrate`), `package.json` (`seed:catalog`), `eslint.config.mjs` (cấm import `seeds/`)
 
 ### Thiết kế chi tiết
 - Định dạng file:

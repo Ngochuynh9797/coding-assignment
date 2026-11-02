@@ -7,12 +7,12 @@ import { hashRequestBody } from '@infra/idempotency/canonical-json';
 import { IdempotencyService } from '@infra/idempotency/idempotency.service';
 import type { ExerciseRef } from '@modules/catalog/catalog.repository';
 import { CatalogService } from '@modules/catalog/catalog.service';
-import { DailyBestsWriter } from '@modules/personal-records/daily-bests.writer';
+import { DailyBestsWriter } from '@modules/personal-records/daily-bests/daily-bests.writer';
 import { AppException, type ErrorDetail } from '@shared/errors/app-exception';
 import { ErrorCode } from '@shared/errors/error-codes';
 import { roundForOutput, UnitConverter } from '@shared/units/unit-converter';
-import type { LogWorkoutsDto } from './dto/log-workouts.dto';
-import { type NewEntry, type NewSet, WorkoutsRepository } from './workouts.repository';
+import type { LogWorkoutsDto } from './log-workouts.dto';
+import { type NewEntry, type NewSet, LogWorkoutsRepository } from './log-workouts.repository';
 
 const MAX_WEIGHT_KG = new Decimal(1000);
 
@@ -49,12 +49,12 @@ interface ConvertedWeight {
 }
 
 @Injectable()
-export class WorkoutsService {
+export class LogWorkoutsService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly catalog: CatalogService,
     private readonly converter: UnitConverter,
-    private readonly repository: WorkoutsRepository,
+    private readonly repository: LogWorkoutsRepository,
     private readonly dailyBests: DailyBestsWriter,
     private readonly idempotency: IdempotencyService,
   ) {}

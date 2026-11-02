@@ -5,7 +5,7 @@ import {
   type PrMetric,
   type RecordRow,
   type RecordRows,
-} from './daily-bests.repository';
+} from '../daily-bests/daily-bests.repository';
 
 export interface PrRecord {
   value: number;

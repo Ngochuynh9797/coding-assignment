@@ -7,13 +7,13 @@ import { CatalogRepository } from '@modules/catalog/catalog.repository';
 import { CatalogService } from '@modules/catalog/catalog.service';
 import { Exercise } from '@modules/catalog/entities/exercise.entity';
 import { ExerciseMuscleGroup } from '@modules/catalog/entities/exercise-muscle-group.entity';
-import { DailyBestsRepository } from '@modules/personal-records/daily-bests.repository';
+import { DailyBestsRepository } from '@modules/personal-records/daily-bests/daily-bests.repository';
 import { PersonalRecordsService } from '@modules/personal-records/personal-records.service';
-import type { HistoryQueryDto } from '@modules/workouts/dto/history.query';
+import type { HistoryQueryDto } from '@modules/workouts/history/history.query';
 import { WorkoutEntry } from '@modules/workouts/entities/workout-entry.entity';
 import { WorkoutSet } from '@modules/workouts/entities/workout-set.entity';
-import { WorkoutHistoryService } from '@modules/workouts/workout-history.service';
-import { WorkoutsRepository } from '@modules/workouts/workouts.repository';
+import { WorkoutHistoryService } from '@modules/workouts/history/workout-history.service';
+import { WorkoutHistoryRepository } from '@modules/workouts/history/workout-history.repository';
 import { UnitConverter } from '@shared/units/unit-converter';
 import { BASE_UNIT_CODE, WEIGHT_UNITS } from '@shared/units/unit.registry';
 import { PERF_USER } from './seed-large';
@@ -214,7 +214,7 @@ async function main(): Promise<void> {
     );
     const history = new WorkoutHistoryService(
       catalog,
-      new WorkoutsRepository(dataSource),
+      new WorkoutHistoryRepository(dataSource),
       converter,
     );
     const records = new PersonalRecordsService(

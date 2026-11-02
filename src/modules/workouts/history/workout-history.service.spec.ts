@@ -4,10 +4,10 @@ import { AppException } from '@shared/errors/app-exception';
 import { encodeCursor } from '@shared/pagination/cursor';
 import { UnitConverter } from '@shared/units/unit-converter';
 import { WEIGHT_UNITS } from '@shared/units/unit.registry';
-import type { HistoryQueryDto } from './dto/history.query';
+import type { HistoryQueryDto } from './history.query';
 import { emptyHistoryResponse } from './history.mapper';
 import { WorkoutHistoryService } from './workout-history.service';
-import type { HistoryEntryRow, WorkoutsRepository } from './workouts.repository';
+import type { HistoryEntryRow, WorkoutHistoryRepository } from './workout-history.repository';
 
 const entry = (id: string): HistoryEntryRow => ({
   id,
@@ -32,7 +32,9 @@ async function rejection(promise: Promise<unknown>): Promise<AppException> {
 
 describe('WorkoutHistoryService', () => {
   let catalog: jest.Mocked<Pick<CatalogService, 'resolveFilterIds'>>;
-  let repository: jest.Mocked<Pick<WorkoutsRepository, 'findHistoryPage' | 'findSetsByEntryIds'>>;
+  let repository: jest.Mocked<
+    Pick<WorkoutHistoryRepository, 'findHistoryPage' | 'findSetsByEntryIds'>
+  >;
   let service: WorkoutHistoryService;
 
   beforeEach(() => {
@@ -45,7 +47,7 @@ describe('WorkoutHistoryService', () => {
     };
     service = new WorkoutHistoryService(
       catalog as unknown as CatalogService,
-      repository as unknown as WorkoutsRepository,
+      repository as unknown as WorkoutHistoryRepository,
       new UnitConverter(WEIGHT_UNITS),
     );
   });

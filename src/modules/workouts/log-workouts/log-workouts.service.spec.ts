@@ -4,13 +4,13 @@ import { v7 } from 'uuid';
 import { hashRequestBody } from '@infra/idempotency/canonical-json';
 import type { IdempotencyService } from '@infra/idempotency/idempotency.service';
 import type { CatalogService } from '@modules/catalog/catalog.service';
-import type { DailyBestsWriter } from '@modules/personal-records/daily-bests.writer';
+import type { DailyBestsWriter } from '@modules/personal-records/daily-bests/daily-bests.writer';
 import { AppException } from '@shared/errors/app-exception';
 import { UnitConverter } from '@shared/units/unit-converter';
 import { WEIGHT_UNITS } from '@shared/units/unit.registry';
-import type { LogWorkoutsDto } from './dto/log-workouts.dto';
-import type { NewEntry, NewSet, WorkoutsRepository } from './workouts.repository';
-import { WorkoutsService } from './workouts.service';
+import type { LogWorkoutsDto } from './log-workouts.dto';
+import type { NewEntry, NewSet, LogWorkoutsRepository } from './log-workouts.repository';
+import { LogWorkoutsService } from './log-workouts.service';
 
 const exercises: Record<string, { id: number; displayName: string }> = {
   'bench press': { id: 1, displayName: 'Bench Press' },
@@ -47,14 +47,14 @@ async function rejection(promise: Promise<unknown>): Promise<AppException> {
   throw new Error('expected the promise to reject');
 }
 
-describe('WorkoutsService.logBulk', () => {
+describe('LogWorkoutsService.logBulk', () => {
   const tx = {} as EntityManager;
   let transaction: jest.Mock;
   let catalog: jest.Mocked<Pick<CatalogService, 'resolveNamesOrThrow'>>;
-  let repository: jest.Mocked<Pick<WorkoutsRepository, 'insertEntriesAndSets'>>;
+  let repository: jest.Mocked<LogWorkoutsRepository>;
   let writer: jest.Mocked<Pick<DailyBestsWriter, 'applySets'>>;
   let idempotency: jest.Mocked<IdempotencyService>;
-  let service: WorkoutsService;
+  let service: LogWorkoutsService;
 
   const inserted = (): { entries: NewEntry[]; sets: NewSet[] } => {
     const [, entries, sets] = repository.insertEntriesAndSets.mock.calls[0]!;
@@ -78,11 +78,11 @@ describe('WorkoutsService.logBulk', () => {
       claim: jest.fn().mockResolvedValue({ kind: 'new' }),
       complete: jest.fn().mockResolvedValue(undefined),
     };
-    service = new WorkoutsService(
+    service = new LogWorkoutsService(
       { transaction } as unknown as DataSource,
       catalog as unknown as CatalogService,
       new UnitConverter(WEIGHT_UNITS),
-      repository as unknown as WorkoutsRepository,
+      repository,
       writer as unknown as DailyBestsWriter,
       idempotency,
     );

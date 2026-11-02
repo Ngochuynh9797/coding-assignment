@@ -234,7 +234,7 @@ Hiện thực tính chất "read model rebuildable from the workout log" trong S
 - Dùng lại `PrCalculator.bestsByGroup` (không viết công thức bằng SQL)
 
 **Không làm**
-- Không chạy tự động trong entrypoint
+- Không chạy tự động trong docker compose
 
 ### Files
 - Tạo: `src/modules/personal-records/rebuild-daily-bests.ts`, `src/modules/personal-records/daily-bests-rebuilder.service.ts`

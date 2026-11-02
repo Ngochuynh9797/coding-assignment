@@ -1,5 +1,5 @@
-import { DailyBestsRebuilder } from '@modules/personal-records/daily-bests-rebuilder.service';
-import { DailyBestsWriter } from '@modules/personal-records/daily-bests.writer';
+import { DailyBestsRebuilder } from '@modules/personal-records/daily-bests/daily-bests-rebuilder.service';
+import { DailyBestsWriter } from '@modules/personal-records/daily-bests/daily-bests.writer';
 import { bodyOf, countRows, entry, findBests, logWorkouts, set } from './setup/fixtures';
 import { createTestApp, resetDatabase, type TestApp } from './setup/test-app';
 

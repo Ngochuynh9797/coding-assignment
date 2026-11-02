@@ -2,8 +2,8 @@ import { Decimal } from 'decimal.js';
 import type { DataSource } from 'typeorm';
 import { runInTransaction } from '@infra/database/transaction';
 import type { DailyBestsWriter } from './daily-bests.writer';
-import { bestsByGroup } from './domain/pr-calculator';
-import { DailyExerciseBest } from './entities/daily-exercise-best.entity';
+import { bestsByGroup } from '../domain/pr-calculator';
+import { DailyExerciseBest } from '../entities/daily-exercise-best.entity';
 
 export interface RebuildResult {
   users: number;

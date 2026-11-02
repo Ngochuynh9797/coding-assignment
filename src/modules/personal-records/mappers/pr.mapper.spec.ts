@@ -1,7 +1,7 @@
 import { Decimal } from 'decimal.js';
 import { UnitConverter } from '@shared/units/unit-converter';
 import { WEIGHT_UNITS } from '@shared/units/unit.registry';
-import type { PrMetric, RecordRow } from './daily-bests.repository';
+import type { PrMetric, RecordRow } from '../daily-bests/daily-bests.repository';
 import { recordValueKg, toRecords, toRecordsResponse } from './pr.mapper';
 
 const converter = new UnitConverter(WEIGHT_UNITS);

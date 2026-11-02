@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { CatalogService } from '@modules/catalog/catalog.service';
 import { type DateRange, periodRanges } from '@shared/date/period';
 import { UnitConverter } from '@shared/units/unit-converter';
-import { DailyBestsRepository, PR_METRICS, type PrMetric } from './daily-bests.repository';
+import { DailyBestsRepository, PR_METRICS, type PrMetric } from './daily-bests/daily-bests.repository';
 import type { CompareQuery } from './dto/compare.query';
 import type { PersonalRecordsQuery } from './dto/personal-records.query';
-import { type PrDelta, prDelta } from './pr-delta';
+import { type PrDelta, prDelta } from './domain/pr-delta';
 import {
   hasAnyRecord,
   type PersonalRecordsResponse,
@@ -13,7 +13,7 @@ import {
   recordValueKg,
   toRecords,
   toRecordsResponse,
-} from './pr.mapper';
+} from './mappers/pr.mapper';
 
 const DEFAULT_TZ = 'UTC';
 

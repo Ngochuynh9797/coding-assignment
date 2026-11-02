@@ -2,7 +2,7 @@ import { Decimal } from 'decimal.js';
 import { UnitConverter } from '@shared/units/unit-converter';
 import { WEIGHT_UNITS } from '@shared/units/unit.registry';
 import { emptyHistoryResponse, toHistoryResponse } from './history.mapper';
-import type { HistoryEntryRow, HistoryPage, HistorySetRow } from './workouts.repository';
+import type { HistoryEntryRow, HistoryPage, HistorySetRow } from './workout-history.repository';
 
 const converter = new UnitConverter(WEIGHT_UNITS);
 

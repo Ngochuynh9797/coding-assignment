@@ -2,7 +2,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { UserIdParam } from '@shared/validation/user-id.param';
 import { CompareQuery } from './dto/compare.query';
 import { PersonalRecordsQuery } from './dto/personal-records.query';
-import type { PersonalRecordsResponse } from './pr.mapper';
+import type { PersonalRecordsResponse } from './mappers/pr.mapper';
 import { type CompareResponse, PersonalRecordsService } from './personal-records.service';
 
 @Controller('users/:userId/personal-records')

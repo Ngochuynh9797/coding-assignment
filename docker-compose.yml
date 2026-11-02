@@ -1,3 +1,20 @@
+x-app: &app
+  build: .
+  image: workout-logging-api:local
+  environment:
+    NODE_ENV: production
+    PORT: 3000
+    DATABASE_URL: postgres://workout:workout@db:5432/workout
+    DB_POOL_MAX: 10
+    LOG_LEVEL: info
+
+x-one-shot: &one-shot
+  <<: *app
+  restart: 'no'
+  # The image's HEALTHCHECK probes the HTTP server, which one-shot jobs never start.
+  healthcheck:
+    disable: true
+
 services:
   db:
     image: postgres:18
@@ -16,21 +33,28 @@ services:
       timeout: 3s
       retries: 10
 
-  app:
-    build: .
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      DATABASE_URL: postgres://workout:workout@db:5432/workout
-      DB_POOL_MAX: 10
-      LOG_LEVEL: info
-      # Local only: seeds the exercise catalog from config/exercise-metadata.json on startup.
-      SEED_CATALOG: 'true'
-    ports:
-      - '3000:3000'
+  migrate:
+    <<: *one-shot
+    command: ['node', 'dist/infrastructure/database/migrate.js', 'run']
     depends_on:
       db:
         condition: service_healthy
+
+  # Local only: the catalog is test data; a real deployment has an admin own it.
+  seed-catalog:
+    <<: *one-shot
+    command: ['node', 'dist/seeds/catalog/seed-catalog.js']
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  app:
+    <<: *app
+    ports:
+      - '3000:3000'
+    depends_on:
+      seed-catalog:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:

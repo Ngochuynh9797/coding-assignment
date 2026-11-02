@@ -216,7 +216,7 @@ Deliverable "setup must work with `docker compose up`" và tiêu chí "Docker se
 **Làm**
 - Dockerfile multi-stage
 - `docker-compose.yml` (postgres:18 + app)
-- Entrypoint chạy migrate + seed rồi start (các bước migrate/seed được nối vào ở T3.1/T3.2, ở task này để sẵn chỗ)
+- Image chỉ build và start app; migrate + seed là các service chạy một lần trong compose, chỉ cho local (được nối vào ở T3.1/T3.2)
 - `GET /health` (liveness)
 
 **Không làm**
@@ -224,14 +224,14 @@ Deliverable "setup must work with `docker compose up`" và tiêu chí "Docker se
 - Không kiểm tra DB trong `/health`: chưa có kết nối DB (T3.1), DB check được nối vào ở T3.1
 
 ### Files
-- Tạo: `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `docker/entrypoint.sh`, `src/health/health.controller.ts`, `src/health/health.module.ts`, `config/.gitkeep` (để `COPY config/` không lỗi trước T3.2)
+- Tạo: `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `src/health/health.controller.ts`, `src/health/health.module.ts`, `config/.gitkeep` (để `COPY config/` không lỗi trước T3.2)
 
 ### Thiết kế chi tiết
-- **Dockerfile**: stage `deps` (`npm ci`), stage `build` (`npm run build`, `npm prune --omit=dev --omit=optional`: `ts-node`/`typescript` là optional peer của `typeorm`, bị npm đánh dấu `devOptional` nên `--omit=dev` không loại), stage `runtime` (`node:22-alpine`, user `node` không phải root, chỉ copy `dist/`, `node_modules/`, `config/`, `package.json`). `HEALTHCHECK` gọi `/api/v1/health`.
+- **Dockerfile**: stage `deps` (`npm ci`), stage `build` (`npm run build`, `npm prune --omit=dev --omit=optional`: `ts-node`/`typescript` là optional peer của `typeorm`, bị npm đánh dấu `devOptional` nên `--omit=dev` không loại), stage `runtime` (`node:22-alpine`, user `node` không phải root, chỉ copy `dist/`, `node_modules/`, `config/`, `package.json`). `HEALTHCHECK` gọi `/api/v1/health`. `CMD ["node", "dist/main.js"]` dạng exec để node là PID 1 và nhận SIGTERM (phối hợp với `enableShutdownHooks`). Dockerfile không chạy migration hay seed: deploy thật chạy migration như một bước riêng.
 - **docker-compose.yml**:
   - `db`: `postgres:18`, env user/password/db, healthcheck `pg_isready`, volume mount tại **`/var/lib/postgresql`** (image Postgres 18 đổi vị trí PGDATA so với các bản trước; đã kiểm tra image: `PGDATA=/var/lib/postgresql/18/docker`, `VOLUME /var/lib/postgresql`), port 5432 publish ra host để debug (đổi được bằng `DB_HOST_PORT` nếu máy đã dùng 5432).
-  - `app`: build từ Dockerfile, `depends_on: db: condition: service_healthy`, `DATABASE_URL` trỏ tới `db`, port 3000.
-- **entrypoint.sh**: `set -e` → `node dist/.../migrate` → `node dist/.../seed-catalog` (chỉ khi `SEED_CATALOG=true`, xem T3.2) → `exec node dist/main.js` (`exec` để nhận SIGTERM, phối hợp với `enableShutdownHooks`).
+  - `migrate`, `seed-catalog`: chạy một lần từ cùng image (`command` ghi đè `CMD`), tắt `HEALTHCHECK` của image; `migrate` chờ `db` healthy, `seed-catalog` chờ `migrate` `service_completed_successfully` (xem T3.1/T3.2).
+  - `app`: cùng image, `depends_on: seed-catalog: condition: service_completed_successfully`, `DATABASE_URL` trỏ tới `db`, port 3000.
 - **/health**: ở task này chỉ là liveness, `200 { status: "ok" }`. DB check (`SELECT 1`, `db: "up"`, `503 SERVICE_UNAVAILABLE`) được nối vào ở T3.1 khi có `DatabaseModule`. Không phụ thuộc `@nestjs/terminus` (một query là đủ).
 
 ### Tiêu chí hoàn thành
@@ -248,5 +248,6 @@ build: add multi-stage Dockerfile, docker compose and health endpoint
 
 ### Rủi ro / điểm cần soi khi review code AI
 - AI quen mount `/var/lib/postgresql/data`, đúng cho Postgres ≤ 17 nhưng sai với image 18 → cần kiểm tra lại theo tài liệu image `postgres:18` lúc làm.
-- Entrypoint thiếu `exec` thì app không nhận SIGTERM.
+- `CMD` dạng shell (`CMD node dist/main.js`) thì `sh` là PID 1, app không nhận SIGTERM.
+- Không đưa migrate/seed vào Dockerfile hay entrypoint của image.
 - Không đưa `devDependencies` vào image runtime.

@@ -1,31 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type { Decimal } from 'decimal.js';
-import { DataSource, type EntityManager, In } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { encodeCursor } from '@shared/pagination/cursor';
-import { WorkoutEntry } from './entities/workout-entry.entity';
-import { WorkoutSet } from './entities/workout-set.entity';
+import { WorkoutSet } from '../entities/workout-set.entity';
 import {
   buildHistoryPageQuery,
   type HistoryEntryRawRow,
   type HistoryPageParams,
 } from './history-query.builder';
-
-export interface NewEntry {
-  id: string;
-  userId: string;
-  exerciseId: number;
-  performedOn: string;
-}
-
-export interface NewSet {
-  id: string;
-  entryId: string;
-  setIndex: number;
-  reps: number;
-  weight: Decimal;
-  unit: string;
-  weightKg: Decimal;
-}
 
 export interface HistoryEntryRow {
   id: string;
@@ -51,32 +33,8 @@ export interface HistorySetRow {
 }
 
 @Injectable()
-export class WorkoutsRepository {
+export class WorkoutHistoryRepository {
   constructor(private readonly dataSource: DataSource) {}
-
-  // One multi-row INSERT per table. Ids are assigned by the caller, so nothing is read back
-  // (updateEntity(false) drops RETURNING). At the DTO limits (100 entries × 50 sets) the sets insert
-  // binds 35k parameters, below PostgreSQL's 65535; raising those limits requires chunking here.
-  async insertEntriesAndSets(
-    tx: EntityManager,
-    entries: NewEntry[],
-    sets: NewSet[],
-  ): Promise<void> {
-    await tx
-      .createQueryBuilder()
-      .insert()
-      .into(WorkoutEntry)
-      .values(entries)
-      .updateEntity(false)
-      .execute();
-    await tx
-      .createQueryBuilder()
-      .insert()
-      .into(WorkoutSet)
-      .values(sets)
-      .updateEntity(false)
-      .execute();
-  }
 
   async findHistoryPage(params: HistoryPageParams): Promise<HistoryPage> {
     const rows = await buildHistoryPageQuery(

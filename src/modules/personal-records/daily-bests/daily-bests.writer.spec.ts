@@ -1,7 +1,7 @@
 import { Decimal } from 'decimal.js';
 import type { EntityManager } from 'typeorm';
 import { DailyBestsWriter } from './daily-bests.writer';
-import type { PrSetInput } from './domain/pr-calculator';
+import type { PrSetInput } from '../domain/pr-calculator';
 
 function set(
   setId: string,
