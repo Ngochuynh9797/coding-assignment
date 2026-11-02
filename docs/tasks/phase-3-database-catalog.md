@@ -1,6 +1,6 @@
 # Phase 3 — Database & catalog
 
-**Ước lượng:** ~1.5h · **Phụ thuộc:** Phase 1, Phase 2 · **Trạng thái:** Chờ review
+**Ước lượng:** ~1.5h · **Phụ thuộc:** Phase 1, Phase 2 · **Trạng thái:** Xong
 
 Migration đúng SCHEMA.md, seed catalog và module catalog để resolve/lọc exercise.
 

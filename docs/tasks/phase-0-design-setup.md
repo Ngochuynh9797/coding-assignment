@@ -1,6 +1,6 @@
 # Phase 0 — Design & setup
 
-**Ước lượng:** ~1h · **Phụ thuộc:** — · **Trạng thái:** Chờ review
+**Ước lượng:** ~1h · **Phụ thuộc:** — · **Trạng thái:** Xong
 
 Đưa ước lượng, giả định, schema, API contract và rules cho AI vào repo trước khi có code.
 

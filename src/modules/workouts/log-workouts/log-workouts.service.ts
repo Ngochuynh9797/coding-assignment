@@ -11,6 +11,7 @@ import { DailyBestsWriter } from '@modules/personal-records/daily-bests/daily-be
 import { AppException, type ErrorDetail } from '@shared/errors/app-exception';
 import { ErrorCode } from '@shared/errors/error-codes';
 import { roundForOutput, UnitConverter } from '@shared/units/unit-converter';
+import { BASE_UNIT_CODE } from '@shared/units/unit.registry';
 import type { LogWorkoutsDto } from './log-workouts.dto';
 import { type NewEntry, type NewSet, LogWorkoutsRepository } from './log-workouts.repository';
 
@@ -139,7 +140,7 @@ export class LogWorkoutsService {
         if (weightKg.gt(MAX_WEIGHT_KG)) {
           errors.push({
             field: `entries[${i}].sets[${j}].weight`,
-            issue: `exceeds maximum of ${MAX_WEIGHT_KG.toFixed()} kg`,
+            issue: `exceeds maximum of ${MAX_WEIGHT_KG.toFixed()} ${BASE_UNIT_CODE}`,
           });
         }
         return { weight, weightKg };

@@ -47,6 +47,10 @@ describe('@IsLocalDate', () => {
     ]);
   });
 
+  it.each(['1899-12-31', '0000-06-15'])('rejects %p as before the minimum date', async (value) => {
+    expect(await issues(PlainDate, value)).toEqual(['must be on or after 1900-01-01']);
+  });
+
   it('reports the format message, not the future message, for an invalid date', async () => {
     expect(await issues(EntryDate, '2026-13-01')).toEqual([formatMessage]);
   });

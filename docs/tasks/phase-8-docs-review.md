@@ -1,6 +1,6 @@
 # Phase 8 — Docs & review
 
-**Ước lượng:** ~1.5h · **Phụ thuộc:** Phase 0–7 · **Trạng thái:** Chờ review
+**Ước lượng:** ~1.5h · **Phụ thuộc:** Phase 0–7 · **Trạng thái:** Xong
 
 README, AI_WORKFLOW.md và kiểm tra cuối từ bản clone sạch.
 
@@ -30,7 +30,7 @@ Deliverable 2: README có architecture overview (kèm diagram), setup, API docs,
 2. **Time estimate vs actual**: giữ bảng ước lượng gốc (T0.1), thêm cột thực tế
 3. **Quick start**: `docker compose up --build`, ví dụ curl theo kịch bản: bulk log (kg + lb, cùng bài 2 lần/ngày) → history `unit=lb` + phân trang → PR → compare `period=month&tz=Asia/Ho_Chi_Minh` → gửi lại cùng `Idempotency-Key`
 4. **Architecture**: sơ đồ mermaid 3 tầng + quan hệ module, luồng request của write flow
-5. **API**: tóm tắt endpoint + bảng mã lỗi, link `docs/API.md`, Swagger `/docs`
+5. **API**: tóm tắt endpoint + bảng mã lỗi, link `docs/API.md` (không có Swagger: chưa có trong code, README không mô tả tính năng chưa có)
 6. **Database**: tóm tắt + link `docs/SCHEMA.md`
 7. **Timezone strategy**: `performed_on DATE` theo giờ địa phương, `TIMESTAMPTZ` UTC cho thời điểm hệ thống, `tz` khi compare; trade-off (không biết giờ tập chính xác; không validate được "tương lai" tuyệt đối)
 8. **Unit extensibility**: checklist thêm `stone` (1 dòng), quy tắc registry chỉ thêm không xóa, vì sao dùng Decimal

@@ -31,6 +31,7 @@ describe('cursor', () => {
     ['missing fields', encode({ v: 1 })],
     ['unknown version', encode({ v: 2, d: '2026-10-31', id: ID })],
     ['invalid date', encode({ v: 1, d: '2026-02-30', id: ID })],
+    ['date PostgreSQL cannot store', encode({ v: 1, d: '0000-06-15', id: ID })],
     ['id that is not a uuid', encode({ v: 1, d: '2026-10-31', id: '42' })],
     ['id of the wrong type', encode({ v: 1, d: '2026-10-31', id: 42 })],
   ])('rejects %s with INVALID_CURSOR', (_, input) => {

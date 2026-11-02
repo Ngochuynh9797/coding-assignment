@@ -8,7 +8,7 @@ This is the contract the implementation is reviewed against. If the code needs t
 - **Content type:** `application/json` for request and response bodies. Request bodies are limited to 1 MB.
 - **User:** `userId` is a path parameter matching `^[A-Za-z0-9_-]{1,64}$`. There is no authentication; user identity is owned by another service.
 - **Request id:** every response carries an `x-request-id` header. A client may send its own `x-request-id` (up to 128 characters) and it is reused; otherwise a UUID is generated. Error bodies repeat it as `requestId`.
-- **Dates:** calendar dates in the user's local timezone, formatted `YYYY-MM-DD`, and must be real dates (`2026-02-30` is rejected). Ranges (`from`/`to`) are inclusive.
+- **Dates:** calendar dates in the user's local timezone, formatted `YYYY-MM-DD`, and must be real dates (`2026-02-30` is rejected) on or after `1900-01-01`. Ranges (`from`/`to`) are inclusive.
 - **Weights:** request weights are JSON numbers (a string such as `"100"` is rejected) with at most 4 decimal places. Original weights are returned exactly as entered; converted and derived values are rounded to 2 decimal places.
 - **Unknown fields** in a body or query string are rejected with `VALIDATION_ERROR`.
 

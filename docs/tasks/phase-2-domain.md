@@ -1,6 +1,6 @@
 # Phase 2 — Domain thuần + unit test
 
-**Ước lượng:** ~1.5h · **Phụ thuộc:** Phase 1 · **Trạng thái:** Chờ review
+**Ước lượng:** ~1.5h · **Phụ thuộc:** Phase 1 · **Trạng thái:** Xong
 
 Các hàm thuần (unit, PR, chuẩn hóa chuỗi, ngày, cursor) được viết test trước, không cần DB.
 

@@ -15,6 +15,7 @@ import {
 } from 'class-validator';
 import { normalizeUnitCode, SUPPORTED_UNIT_CODES } from '@shared/units/unit.registry';
 import { IsLocalDate } from '@shared/validation/is-local-date';
+import { MaxDecimalPlaces } from '@shared/validation/max-decimal-places';
 
 const supportedUnits = `Supported units: ${SUPPORTED_UNIT_CODES.join(', ')}`;
 
@@ -25,7 +26,8 @@ export class SetDto {
   reps!: number;
 
   // Matches workout_sets.weight NUMERIC(10,4): more decimals would be rounded silently by the DB.
-  @IsNumber({ allowNaN: false, allowInfinity: false, maxDecimalPlaces: 4 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @MaxDecimalPlaces(4)
   @Min(0)
   weight!: number;
 

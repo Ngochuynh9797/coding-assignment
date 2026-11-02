@@ -173,8 +173,8 @@ async function measure(
 }
 
 async function printEnvironment(dataSource: DataSource): Promise<void> {
-  const setting = async (sql: string): Promise<string> => {
-    const [row] = await dataSource.query<Record<string, string>[]>(sql);
+  const setting = async (sql: string, params: string[] = []): Promise<string> => {
+    const [row] = await dataSource.query<Record<string, string>[]>(sql, params);
     return Object.values(row!)[0]!;
   };
   const cpu = cpus();
@@ -184,7 +184,7 @@ async function printEnvironment(dataSource: DataSource): Promise<void> {
   console.log(`- Node.js ${process.version}`);
   console.log(`- ${await setting('SELECT version()')}`);
   for (const name of ['shared_buffers', 'work_mem', 'effective_cache_size', 'random_page_cost']) {
-    console.log(`- ${name} = ${await setting(`SHOW ${name}`)}`);
+    console.log(`- ${name} = ${await setting('SELECT current_setting($1)', [name])}`);
   }
   const entries = dataSource.getRepository(WorkoutEntry);
   console.log(
@@ -192,7 +192,9 @@ async function printEnvironment(dataSource: DataSource): Promise<void> {
   );
   console.log(`- workout_sets: ${await dataSource.getRepository(WorkoutSet).count()}`);
   for (const table of ['workout_entries', 'workout_sets', 'daily_exercise_bests']) {
-    const size = await setting(`SELECT pg_size_pretty(pg_total_relation_size('${table}'))`);
+    const size = await setting('SELECT pg_size_pretty(pg_total_relation_size($1::regclass))', [
+      table,
+    ]);
     console.log(`- ${table} size with indexes: ${size}`);
   }
 }

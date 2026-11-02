@@ -98,6 +98,19 @@ describe('CompareQuery', () => {
     ]);
   });
 
+  it('reports a custom date before the minimum with its own message', async () => {
+    expect(await details({ ...custom, compareFrom: '0000-12-01' })).toEqual([
+      { field: 'compareFrom', issue: 'must be on or after 1900-01-01' },
+    ]);
+  });
+
+  // The previous period of an anchor in 1900-01 starts in 1899-12, which PostgreSQL still stores.
+  it('rejects an anchor before the minimum date', async () => {
+    expect(await details({ period: 'month', anchor: '0001-01-15' })).toEqual([
+      { field: 'anchor', issue: 'must be on or after 1900-01-01' },
+    ]);
+  });
+
   it('rejects an invalid tz', async () => {
     expect(await details({ period: 'month', tz: 'Mars/Olympus' })).toEqual([
       { field: 'tz', issue: 'must be a valid IANA timezone' },

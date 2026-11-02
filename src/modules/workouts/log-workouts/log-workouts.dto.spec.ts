@@ -56,11 +56,15 @@ describe('LogWorkoutsDto', () => {
     expect(await fields(withSet({ reps }))).toEqual(['entries[0].sets[0].reps']);
   });
 
-  it.each([-5, '100', 1.23456, Number.NaN, null])('rejects weight %p', async (weight) => {
-    expect(await fields(withSet({ weight }))).toEqual(['entries[0].sets[0].weight']);
-  });
+  // 1e-7 and 1.5e-7 print in exponent form, which class-validator's maxDecimalPlaces misreads.
+  it.each([-5, '100', 1.23456, 1e-7, 1.5e-7, Number.NaN, null])(
+    'rejects weight %p',
+    async (weight) => {
+      expect(await fields(withSet({ weight }))).toEqual(['entries[0].sets[0].weight']);
+    },
+  );
 
-  it.each([0, 102.5, 1.2345])('accepts weight %p', async (weight) => {
+  it.each([0, 102.5, 1.2345, 1e-4])('accepts weight %p', async (weight) => {
     await expect(
       createValidationPipe().transform(withSet({ weight }), body),
     ).resolves.toBeDefined();

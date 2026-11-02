@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 import type { PeriodKind } from '@shared/date/period';
 import { BASE_UNIT_CODE } from '@shared/units/unit.registry';
-import { IsLocalDate, LOCAL_DATE_FORMAT_MESSAGE } from '@shared/validation/is-local-date';
+import { invalidLocalDateMessage, IsLocalDate } from '@shared/validation/is-local-date';
 import { IsOnOrBefore } from '@shared/validation/is-on-or-before';
 import { IsTimeZone } from '@shared/validation/is-time-zone';
 import { ExerciseName, OutputUnit } from './personal-records.query';
@@ -45,7 +45,7 @@ function CustomFormDate(): PropertyDecorator {
         message: ({ value }) =>
           value === undefined
             ? `is required when any of ${CUSTOM_FIELDS_LIST} is given`
-            : LOCAL_DATE_FORMAT_MESSAGE,
+            : invalidLocalDateMessage(value),
       },
     ),
   );

@@ -1,13 +1,15 @@
 import { isNotTooFarInFuture, isValidLocalDate } from './local-date';
 
 describe('isValidLocalDate', () => {
-  it.each(['2028-02-29', '2026-01-01', '2026-12-31'])('accepts %p', (input) => {
+  it.each(['2028-02-29', '2026-01-01', '2026-12-31', '1900-01-01'])('accepts %p', (input) => {
     expect(isValidLocalDate(input)).toBe(true);
   });
 
   it.each([
     '2026-02-29',
     '2026-02-30',
+    '1899-12-31',
+    '0000-06-15',
     '2026-13-01',
     '2026-00-10',
     '26-1-1',

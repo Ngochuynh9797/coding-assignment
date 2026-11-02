@@ -26,7 +26,7 @@ Global filter and pipe are registered in `app.module.ts` (`APP_FILTER`, `APP_PIP
 Import rules (enforced by `import/no-restricted-paths`):
 - `config/`, `common/`, `shared/`, `infrastructure/`, `health/` never import from `modules/`
 - `shared/` never imports from `infrastructure/database` (no DB access in `shared/`)
-- Nothing imports from `seeds/`; `seeds/` may import `modules/` and `infrastructure/`
+- Nothing in `src/` imports from `seeds/` (the e2e setup in `test/e2e/setup/` uses the seeder to load the test catalog); `seeds/` may import `modules/` and `infrastructure/`
 - Modules depend one way only: `workouts → catalog`, `workouts → personal-records`, `personal-records → catalog`
 
 ## Forbidden
@@ -36,7 +36,7 @@ Import rules (enforced by `import/no-restricted-paths`):
 - Hardcoded units (`'kg'`, `'lb'`, `@IsEnum([...])`, `if (unit === ...)`) outside the unit registry (tests excepted)
 - Server timezone in date logic (`new Date('YYYY-MM-DD')`, `getMonth()`, ...): dates are `YYYY-MM-DD` strings; periods use the user's `tz`
 - `useContainer` from class-validator
-- Raw SQL via `query(...)` outside migrations, the `/health` ping, the `daily_exercise_bests` upsert in `DailyBestsWriter` (per-metric `GREATEST`/`CASE` that QueryBuilder's `orUpdate` cannot express), the e2e reset in `test/e2e/setup/` (`TRUNCATE`) and the perf scripts in `scripts/` (`unnest` bulk insert, `VACUUM`, `EXPLAIN`): use entity repositories, or QueryBuilder (always with bound parameters)
+- Raw SQL via `query(...)` outside migrations, the `/health` ping, the `daily_exercise_bests` upsert in `DailyBestsWriter` (per-metric `GREATEST`/`CASE` that QueryBuilder's `orUpdate` cannot express), the e2e reset in `test/e2e/setup/` (`TRUNCATE`) and the perf scripts in `scripts/` (`unnest` bulk insert, `VACUUM`, `EXPLAIN`, environment readout with bound parameters): use entity repositories, or QueryBuilder (always with bound parameters)
 - `synchronize: true` or `migration:generate`; entity columns without an explicit `name`; `NUMERIC` columns without `decimalTransformer`
 - Writes to `daily_exercise_bests` outside `DailyBestsWriter` and the rebuild job (T4.4)
 
