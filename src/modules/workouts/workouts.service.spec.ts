@@ -51,7 +51,7 @@ describe('WorkoutsService.logBulk', () => {
   const tx = {} as EntityManager;
   let transaction: jest.Mock;
   let catalog: jest.Mocked<Pick<CatalogService, 'resolveNamesOrThrow'>>;
-  let repository: jest.Mocked<WorkoutsRepository>;
+  let repository: jest.Mocked<Pick<WorkoutsRepository, 'insertEntriesAndSets'>>;
   let writer: jest.Mocked<Pick<DailyBestsWriter, 'applySets'>>;
   let idempotency: jest.Mocked<IdempotencyService>;
   let service: WorkoutsService;
@@ -82,7 +82,7 @@ describe('WorkoutsService.logBulk', () => {
       { transaction } as unknown as DataSource,
       catalog as unknown as CatalogService,
       new UnitConverter(WEIGHT_UNITS),
-      repository,
+      repository as unknown as WorkoutsRepository,
       writer as unknown as DailyBestsWriter,
       idempotency,
     );

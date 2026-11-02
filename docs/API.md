@@ -202,7 +202,7 @@ Workout history, newest first, with cursor-based pagination.
 
 | Param | Required | Rules |
 |---|---|---|
-| `exercise` | No | 1–100 characters. Partial, case- and whitespace-insensitive match on the exercise name; `%` and `_` match literally |
+| `exercise` | No | 1–100 characters, not blank. Partial, case- and whitespace-insensitive match on the exercise name; `%` and `_` match literally |
 | `muscleGroup` | No | Muscle group code, `^[a-z_]{1,50}$` (e.g. `chest`) |
 | `from` | No | `YYYY-MM-DD`, inclusive |
 | `to` | No | `YYYY-MM-DD`, inclusive; `from` must be on or before `to` |

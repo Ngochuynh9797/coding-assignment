@@ -1,6 +1,6 @@
 # Phase 5 — History
 
-**Ước lượng:** ~1.5h · **Phụ thuộc:** Phase 3, Phase 4 · **Trạng thái:** Chờ review
+**Ước lượng:** ~1.5h · **Phụ thuộc:** Phase 3, Phase 4 · **Trạng thái:** Xong
 
 Core feature 2: lịch sử có filter, keyset pagination và đổi đơn vị.
 
@@ -36,7 +36,7 @@ Core feature 2: filter history theo "exercise name (partial match)", "date range
 ### Thiết kế chi tiết
 ```ts
 class HistoryQueryDto {
-  @IsOptional() @IsString() @MinLength(1) @MaxLength(100) exercise?: string;     // partial
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(100) @Matches(/\S/) exercise?: string; // partial, not blank
   @IsOptional() @Matches(/^[a-z_]{1,50}$/) muscleGroup?: string;                 // code
   @IsOptional() @IsLocalDate() from?: string;
   @IsOptional() @IsLocalDate() to?: string;
@@ -51,6 +51,8 @@ class HistoryQueryDto {
   - Có filter mà không khớp exercise nào → `exerciseIds = []` → service trả **rỗng ngay**, không query `workout_entries`.
   - Có cả hai → giao 2 tập.
 - `exercise` đi qua `normalizeExerciseName` + `escapeLike` (nằm trong catalog, T3.3).
+- `exercise` toàn khoảng trắng → `VALIDATION_ERROR` (`exercise must not be blank`), giống `ListExercisesQuery`: chuỗi trống sau normalize khớp toàn bộ catalog.
+- `from > to` được kiểm tra trong service (so sánh chuỗi `YYYY-MM-DD` đã validate), không phải trong DTO.
 
 ### Tiêu chí hoàn thành
 - [ ] Filter không khớp → 0 query vào bảng entries
@@ -86,8 +88,8 @@ feat(workouts): add history query validation and catalog-based filter resolution
 - Định dạng response, đổi đơn vị (T5.3)
 
 ### Files
-- Sửa: `src/modules/workouts/workouts.repository.ts`
-- Tạo: `src/modules/workouts/history-query.builder.ts` (dựng SQL động)
+- Sửa: `src/modules/workouts/workouts.repository.ts`, `src/infrastructure/database/data-source.ts` (type parser cho `DATE`), `package.json` (`@types/pg`)
+- Tạo: `src/modules/workouts/history-query.builder.ts` (dựng SQL động), `src/modules/workouts/history-query.builder.spec.ts`, `src/infrastructure/database/data-source.spec.ts`
 
 ### Thiết kế chi tiết
 - SQL được **dựng động**, chỉ thêm điều kiện khi có filter (tránh dạng `($2 IS NULL OR …)` làm planner chọn plan chung kém):
@@ -112,6 +114,8 @@ feat(workouts): add history query validation and catalog-based filter resolution
   ```
 - `nextCursor` = `encodeCursor` của row cuối cùng trong trang (khi `hasMore`).
 - Numeric (`weight`, `weight_kg`) parse từ string thành `Decimal` ngay trong repository; `performed_on` giữ dạng string `YYYY-MM-DD` (cấu hình type parser của `pg` cho `DATE` (OID 1082) trả string, tránh bị đổi thành `Date` theo timezone server).
+  - Đã chốt: parser gắn theo DataSource qua `extra.types.getTypeParser` trong `data-source.ts` (không dùng `pg.types.setTypeParser` global); các OID khác dùng parser mặc định.
+- Builder dùng QueryBuilder với tham số đặt tên (không `query(...)`) và tham chiếu bảng theo tên, nên SQL render được trong unit test mà không cần kết nối DB. Sets đọc bằng `Repository.find` + `In(entryIds)`, `Decimal` có sẵn nhờ `decimalTransformer`.
 - Phương án dự phòng (chỉ làm nếu T7.5 đo thấy chậm): khi `exercise_id = ANY(...)` có nhiều id, Postgres phải đọc mọi entry khớp rồi sort; khi đó chuyển sang k-way merge bằng `unnest(ids) CROSS JOIN LATERAL (… ORDER BY … LIMIT n+1)`.
 
 ### Tiêu chí hoàn thành
@@ -152,7 +156,7 @@ feat(workouts): add keyset-paginated history query with batched set loading
 - Cache, ETag
 
 ### Files
-- Sửa: `src/modules/workouts/workouts.controller.ts`, `src/modules/workouts/workout-history.service.ts`
+- Sửa: `src/modules/workouts/workouts.controller.ts`, `src/modules/workouts/workout-history.service.ts`, `src/modules/workouts/workouts.module.ts` (đăng ký `WorkoutHistoryService`)
 - Tạo: `src/modules/workouts/history.mapper.ts`, `src/modules/workouts/history.mapper.spec.ts`
 
 ### Thiết kế chi tiết

@@ -3,6 +3,7 @@ import { IdempotencyModule } from '@infra/idempotency/idempotency.module';
 import { CatalogModule } from '@modules/catalog/catalog.module';
 import { PersonalRecordsModule } from '@modules/personal-records/personal-records.module';
 import { UnitsModule } from '@shared/units/units.module';
+import { WorkoutHistoryService } from './workout-history.service';
 import { WorkoutsController } from './workouts.controller';
 import { WorkoutsRepository } from './workouts.repository';
 import { WorkoutsService } from './workouts.service';
@@ -10,6 +11,6 @@ import { WorkoutsService } from './workouts.service';
 @Module({
   imports: [CatalogModule, PersonalRecordsModule, IdempotencyModule, UnitsModule],
   controllers: [WorkoutsController],
-  providers: [WorkoutsService, WorkoutsRepository],
+  providers: [WorkoutsService, WorkoutHistoryService, WorkoutsRepository],
 })
 export class WorkoutsModule {}
