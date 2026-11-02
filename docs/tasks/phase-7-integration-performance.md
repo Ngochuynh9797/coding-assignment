@@ -1,6 +1,6 @@
 # Phase 7 — Integration, edge case & performance
 
-**Ước lượng:** ~2h · **Phụ thuộc:** Phase 3–6 · **Trạng thái:** Chờ review
+**Ước lượng:** ~2h · **Phụ thuộc:** Phase 3–6 · **Trạng thái:** Xong
 
 Kiểm chứng end-to-end trên Postgres thật và đo hiệu năng với 50k entries.
 
@@ -100,7 +100,7 @@ Phủ các edge case của đề bài cho việc log: validation, unit, bulk ngu
 - 2 request đồng thời cùng key → đúng 1 lần ghi, cả 2 nhận 201 cùng body
 
 ### Concurrency
-- 2 bulk request song song của cùng user: A log (ngày 1, ngày 2), B log (ngày 2, ngày 1) cùng exercise, lặp 20 lần → không lỗi deadlock (`40P01`), bests mỗi ngày đúng bằng max của tất cả set
+- 2 bulk request song song của cùng user: A log 10 ngày theo thứ tự tăng, B log 10 ngày đó theo thứ tự giảm, cùng exercise, lặp 50 lần → không lỗi deadlock (`40P01`), bests mỗi ngày đúng bằng max của tất cả set. (Ban đầu là 2 ngày × 20 lần, nhưng khi bỏ sắp xếp lock thì gần như không bao giờ tái hiện được deadlock; với 10 ngày, mỗi vòng có ~2–5% khả năng deadlock, nên test bắt được regression với xác suất cao nhưng không chắc chắn.)
 - 2 request song song cùng ngày, cùng exercise, không có idempotency key → cả 2 được ghi (2 entry), bests đúng
 
 ### Tiêu chí hoàn thành
@@ -231,7 +231,7 @@ test: add e2e coverage for personal records, period comparison and bests rebuild
 
 ### Thiết kế chi tiết
 - Dữ liệu:
-  - `perf-user`: **50 000 entries**, ~4 set mỗi entry (~200k sets), trải 5 năm, 40 exercise phân bố lệch (vài bài chiếm phần lớn), 1–4 entry mỗi ngày tập
+  - `perf-user`: **50 000 entries**, ~4 set mỗi entry (~200k sets), trải 5 năm, 40 exercise phân bố lệch (vài bài chiếm phần lớn), ngày nào cũng tập, ~27 entry/ngày (50 000 entries trong 5 năm không khớp được với "1–4 entry mỗi ngày tập"; đã chốt giữ 50k + 5 năm)
   - Thêm 200 user nền × 2 000 entries để index có độ chọn lọc thực tế
   - Insert bằng `unnest` theo lô 5 000, sau đó chạy rebuild bests và `ANALYZE`
 - Đo cho `perf-user` (chạy 20 lần, lấy p50/p95):

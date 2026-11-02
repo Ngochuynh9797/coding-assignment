@@ -19,6 +19,17 @@ Written on 2026-11-01, before starting implementation.
 | 8 | Docs & final review | ~1.5h |
 | | **Total** | **~14h** |
 
+## Running tests
+
+```bash
+npm test            # unit tests, no database needed
+npm run test:e2e    # end-to-end tests against a real PostgreSQL 18
+```
+
+The e2e suite needs a running **Docker** daemon: it starts one `postgres:18` container with Testcontainers, applies the migrations and seeds the catalog, then removes the container at the end. No manual database setup is needed. Node.js 22 is required (see `.nvmrc`).
+
+Performance measurements with 50 000 entries for one user: [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md).
+
 ## Assumptions
 
 - **Exercises are a curated catalog managed by an admin.** Users can only log exercises that exist in the catalog; unknown names are rejected with `400 UNKNOWN_EXERCISE`. In this project the catalog is seeded from a file.

@@ -19,7 +19,7 @@ Nguồn chuẩn cho schema: [`docs/SCHEMA.md`](../SCHEMA.md). Spec nào lệch v
 | 4 | [Log workout](phase-4-log-workout.md) | T4.1–T4.4 | Phase 2, 3 | ~2h | Xong |
 | 5 | [History](phase-5-history.md) | T5.1–T5.3 | Phase 3, 4 | ~1.5h | Xong |
 | 6 | [Personal records](phase-6-personal-records.md) | T6.1–T6.3 | Phase 4 | ~1.5h | Xong |
-| 7 | [Integration, edge case & performance](phase-7-integration-performance.md) | T7.1–T7.5 | Phase 3–6 | ~2h | Chờ review |
+| 7 | [Integration, edge case & performance](phase-7-integration-performance.md) | T7.1–T7.5 | Phase 3–6 | ~2h | Xong |
 | 8 | [Docs & review](phase-8-docs-review.md) | T8.1–T8.3 | Phase 0–7 | ~1.5h | Chờ review |
 
 **Tổng ước lượng: ~14h**
